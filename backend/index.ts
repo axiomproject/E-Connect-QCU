@@ -1,6 +1,5 @@
 import express from 'express'
 import { type Handler } from 'vite-plugin-mix'
-import { Todo } from '../lib'
 import { env } from './env'
 import cors from 'cors'
 import bodyParser from 'body-parser'
