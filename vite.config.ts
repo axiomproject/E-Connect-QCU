@@ -31,5 +31,6 @@ export default defineConfig({
     }
   },
 
-  plugins: [vue(), mix({ handler: './backend/index.ts' })]
+  plugins: [vue(),commonjs(), mix({ handler: './backend/index.ts' })]
+  
 })
