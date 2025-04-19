@@ -961,4 +961,31 @@
   transform: translateY(20px);
   opacity: 0;
 }
+
+/* Mobile-friendly table adjustments */
+@media (max-width: 768px) {
+  .badges-table th:nth-child(2),
+  .badges-table th:nth-child(3),
+  .badges-table th:nth-child(4),
+  .badges-table td:nth-child(2),
+  .badges-table td:nth-child(3),
+  .badges-table td:nth-child(4) {
+    display: none;
+  }
+  
+  /* Ensure first and last columns (Badge and Actions) take appropriate width */
+  .badges-table th:first-child,
+  .badges-table td:first-child {
+    width: 75%;
+  }
+  
+  .badges-table th:last-child,
+  .badges-table td:last-child {
+    width: 25%;
+  }
+}
+.table-responsive {
+  overflow-x: auto;
+  width: 100%;
+}
   </style>
