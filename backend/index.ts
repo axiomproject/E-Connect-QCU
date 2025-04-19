@@ -13,6 +13,7 @@ import multer from 'multer'; // Import multer for file uploads
 import path from 'path'; // Import path for file paths
 import fs from 'fs'; // Import fs for file system operations
 
+
 // Extend Express Request interface
 declare global {
   namespace Express {
@@ -2952,21 +2953,10 @@ app.get('/api/quotes/random', (req, res) => {
     
   });
 
-  if (process.env.NODE_ENV === 'production') {
-    console.log('Running in production mode, serving static files');
-    const distPath = path.resolve(__dirname, '..', 'dist');
-    console.log(`Looking for static files in: ${distPath}`);
-    
-    // Serve static files from the dist directory
-    app.use(express.static(distPath));
-    
-    // For SPA routing - handle all non-API routes
-    app.get('*', (req, res) => {
-      if (!req.path.startsWith('/api/')) {
-        res.sendFile(path.join(distPath, 'index.html'));
-      }
-    });
-  }
+  app.use(express.static(path.resolve(__dirname, '../../dist')));
+  app.get('*', (req, res) => {
+    res.sendFile(path.resolve(__dirname, '../../dist/index.html'));
+  });
   
   // Make sure there's only ONE app.listen call at the END of the file
   const PORT = process.env.PORT ? parseInt(process.env.PORT) : 10000;
