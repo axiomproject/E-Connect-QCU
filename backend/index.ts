@@ -4,11 +4,11 @@ const { env } = require('./env');
 import cors from 'cors'
 import bodyParser from 'body-parser'
 import jwt from 'jsonwebtoken'
-import * as dbModule from './db';
 import bcrypt from 'bcrypt' // Import bcrypt
 import crypto from 'crypto' // For generating verification tokens
-import * as emailService from './services/emailService';
-import * as notificationServiceModule from './services/notificationService';
+const emailService = require('./services/emailService');
+const notificationServiceModule = require('./services/notificationService');
+const dbModule = require('./db');
 import multer from 'multer'; // Import multer for file uploads
 import path from 'path'; // Import path for file paths
 import fs from 'fs'; // Import fs for file system operations
@@ -2601,7 +2601,15 @@ app.get('/api/leaderboard', authenticateToken, async (req, res) => {
     
     console.log(`Leaderboard query returned ${result.rows.length} rows`);
     // Log the raw data for the first few users for debugging
-    result.rows.slice(0, 3).forEach((user, i) => {
+    result.rows.slice(0, 3).forEach((user: {
+      id: number;
+      username: string;
+      avatar: string | null;
+      points: string | number;
+      carbon_saved: string | number;
+      badge_icons?: string[];
+      badge_names?: string[];
+    }, i: number) => {
       console.log(`Raw user ${i} data:`, {
         username: user.username,
         points: user.points,
@@ -2610,7 +2618,15 @@ app.get('/api/leaderboard', authenticateToken, async (req, res) => {
     });
     
     // Process the results with detailed logging
-    const leaderboard = result.rows.map((user, index) => {
+    const leaderboard = result.rows.map((user: {
+      id: number;
+      username: string;
+      avatar: string | null;
+      points: string | number;
+      carbon_saved: string | number;
+      badge_icons?: string[];
+      badge_names?: string[];
+    }, index: number) => {
       // Create an array of badge objects with both icon and name
       const badgeDetails = [];
       if (user.badge_icons && user.badge_names) {
