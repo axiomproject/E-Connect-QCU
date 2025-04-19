@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build", 
-    "start": "node build/backend/index.js"
+    "start": "node build/index.js"
   },
   "prettier": {
     "arrowParens": "avoid",
