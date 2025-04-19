@@ -5,12 +5,10 @@ import cors from 'cors'
 import bodyParser from 'body-parser'
 import jwt from 'jsonwebtoken'
 import * as dbModule from './db';
-const pool = dbModule.pool;
 import bcrypt from 'bcrypt' // Import bcrypt
 import crypto from 'crypto' // For generating verification tokens
-import { sendVerificationEmail, sendPasswordResetEmail } from './services/emailService' // Import email service
+import * as emailService from './services/emailService';
 import * as notificationServiceModule from './services/notificationService';
-const NotificationService = notificationServiceModule.NotificationService || notificationServiceModule.default;
 import multer from 'multer'; // Import multer for file uploads
 import path from 'path'; // Import path for file paths
 import fs from 'fs'; // Import fs for file system operations
@@ -32,6 +30,12 @@ const app = express()
 // Middleware
 app.use(cors())
 app.use(bodyParser.json())
+
+const sendVerificationEmail = emailService.sendVerificationEmail;
+const sendPasswordResetEmail = emailService.sendPasswordResetEmail;
+const NotificationService = notificationServiceModule.NotificationService;
+const pool = dbModule.pool;
+
 
 // Configure multer for file uploads
 const storage = multer.diskStorage({
