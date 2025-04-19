@@ -3,7 +3,7 @@
   "compilerOptions": {
     "outDir": "../backend",
     "rootDir": ".",
-    "module": "CommonJS",
+    "module": "ESNext",
     "target": "ES2020",
     "esModuleInterop": true,
     "strict": true,

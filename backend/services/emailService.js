@@ -1,23 +1,17 @@
-"use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.sendPasswordResetEmail = exports.sendVerificationEmail = exports.sendEmail = void 0;
-const nodemailer_1 = __importDefault(require("nodemailer"));
-const env_1 = require("../env");
+import nodemailer from 'nodemailer';
+import { env } from '../env';
 console.log('Setting up email transporter with Gmail:');
-console.log(`- HOST: ${env_1.env.EMAIL_HOST}`);
-console.log(`- PORT: ${env_1.env.EMAIL_PORT}`);
-console.log(`- USER: ${env_1.env.EMAIL_USER}`);
+console.log(`- HOST: ${env.EMAIL_HOST}`);
+console.log(`- PORT: ${env.EMAIL_PORT}`);
+console.log(`- USER: ${env.EMAIL_USER}`);
 // Create a transporter for Gmail
-const transporter = nodemailer_1.default.createTransport({
-    host: env_1.env.EMAIL_HOST,
-    port: Number(env_1.env.EMAIL_PORT),
+const transporter = nodemailer.createTransport({
+    host: env.EMAIL_HOST,
+    port: Number(env.EMAIL_PORT),
     secure: false,
     auth: {
-        user: env_1.env.EMAIL_USER,
-        pass: env_1.env.EMAIL_PASS
+        user: env.EMAIL_USER,
+        pass: env.EMAIL_PASS
     },
     tls: {
         // do not fail on invalid certs
@@ -36,9 +30,9 @@ transporter.verify((error) => {
 /**
  * Send an email using the configured transport
  */
-const sendEmail = async (options) => {
+export const sendEmail = async (options) => {
     const mailOptions = {
-        from: env_1.env.EMAIL_FROM,
+        from: env.EMAIL_FROM,
         ...options
     };
     try {
@@ -47,7 +41,7 @@ const sendEmail = async (options) => {
         console.log(`Email sent to: ${options.to}`);
         console.log(`Message ID: ${info.messageId}`);
         // For Mailtrap, we can output the preview URL
-        if (env_1.env.EMAIL_HOST.includes('mailtrap')) {
+        if (env.EMAIL_HOST.includes('mailtrap')) {
             console.log(`Preview URL: https://mailtrap.io/inboxes`);
         }
     }
@@ -57,14 +51,13 @@ const sendEmail = async (options) => {
         throw new Error(`Failed to send email: ${errorMessage}`);
     }
 };
-exports.sendEmail = sendEmail;
 /**
  * Send a verification email
  */
-const sendVerificationEmail = async (to, username, verificationToken) => {
+export const sendVerificationEmail = async (to, username, verificationToken) => {
     // Make sure the verification link points correctly to the frontend route
     // Note: using lowercase 'verify-email' to match the route
-    const verificationLink = `${env_1.env.APP_URL}/verify-email?token=${verificationToken}`;
+    const verificationLink = `${env.APP_URL}/verify-email?token=${verificationToken}`;
     console.log(`Generated verification link: ${verificationLink} for user: ${username}`);
     const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -102,20 +95,19 @@ const sendVerificationEmail = async (to, username, verificationToken) => {
     
     © ${new Date().getFullYear()} E-Connect. All rights reserved.
   `;
-    await (0, exports.sendEmail)({
+    await sendEmail({
         to,
         subject: 'Verify Your E-Connect Account',
         html,
         text
     });
 };
-exports.sendVerificationEmail = sendVerificationEmail;
 /**
  * Send a password reset email
  */
-const sendPasswordResetEmail = async (to, username, resetToken) => {
+export const sendPasswordResetEmail = async (to, username, resetToken) => {
     // Create the reset link to the frontend route
-    const resetLink = `${env_1.env.APP_URL}/reset-password?token=${resetToken}`;
+    const resetLink = `${env.APP_URL}/reset-password?token=${resetToken}`;
     console.log(`Generated password reset link: ${resetLink} for user: ${username}`);
     const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -153,11 +145,10 @@ const sendPasswordResetEmail = async (to, username, resetToken) => {
     
     © ${new Date().getFullYear()} E-Connect. All rights reserved.
   `;
-    await (0, exports.sendEmail)({
+    await sendEmail({
         to,
         subject: 'Reset Your E-Connect Password',
         html,
         text
     });
 };
-exports.sendPasswordResetEmail = sendPasswordResetEmail;
