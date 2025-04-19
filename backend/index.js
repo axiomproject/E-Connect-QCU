@@ -9,11 +9,11 @@ const { env } = require('./env');
 const cors_1 = __importDefault(require("cors"));
 const body_parser_1 = __importDefault(require("body-parser"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
-const db_1 = require("./db"); // Import the database pool
 const bcrypt_1 = __importDefault(require("bcrypt")); // Import bcrypt
 const crypto_1 = __importDefault(require("crypto")); // For generating verification tokens
-const emailService_1 = require("./services/emailService"); // Import email service
-const notificationService_1 = require("./services/notificationService");
+const emailService = require('./services/emailService');
+const notificationServiceModule = require('./services/notificationService');
+const dbModule = require('./db');
 const multer_1 = __importDefault(require("multer")); // Import multer for file uploads
 const path_1 = __importDefault(require("path")); // Import path for file paths
 const fs_1 = __importDefault(require("fs")); // Import fs for file system operations
@@ -23,6 +23,10 @@ const app = (0, express_1.default)();
 // Middleware
 app.use((0, cors_1.default)());
 app.use(body_parser_1.default.json());
+const sendVerificationEmail = emailService.sendVerificationEmail;
+const sendPasswordResetEmail = emailService.sendPasswordResetEmail;
+const NotificationService = notificationServiceModule.NotificationService;
+const pool = dbModule.pool;
 // Configure multer for file uploads
 const storage = multer_1.default.diskStorage({
     destination: (req, file, cb) => {
@@ -82,7 +86,7 @@ const authenticateAdmin = (req, res, next) => {
         }
         // Verify the admin still exists and is active
         try {
-            const adminResult = await db_1.pool.query('SELECT * FROM admin_users WHERE id = $1 AND is_active = TRUE', [user.id]);
+            const adminResult = await pool.query('SELECT * FROM admin_users WHERE id = $1 AND is_active = TRUE', [user.id]);
             if (adminResult.rowCount === 0) {
                 return res.status(403).json({ message: 'Admin account not found or inactive' });
             }
@@ -104,7 +108,7 @@ app.post('/api/register', async (req, res) => {
     try {
         const { username, email, password } = req.body;
         // Check if user already exists in the database
-        const userCheck = await db_1.pool.query('SELECT * FROM users WHERE email = $1', [email]);
+        const userCheck = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
         if (userCheck?.rowCount && userCheck.rowCount > 0) {
             return res.status(400).json({ message: 'User already exists' });
         }
@@ -112,7 +116,7 @@ app.post('/api/register', async (req, res) => {
         const saltRounds = 10;
         const hashedPassword = await bcrypt_1.default.hash(password, saltRounds);
         // Start a transaction
-        const client = await db_1.pool.connect();
+        const client = await pool.connect();
         try {
             await client.query('BEGIN');
             // Insert new user
@@ -125,7 +129,7 @@ app.post('/api/register', async (req, res) => {
             // Store verification token
             await client.query('INSERT INTO email_verification (user_id, token, expires_at) VALUES ($1, $2, $3)', [userId, verificationToken, expiresAt]);
             try {
-                await notificationService_1.NotificationService.createNewUserNotification(userId, username);
+                await NotificationService.createNewUserNotification(userId, username);
             }
             catch (notificationError) {
                 // Log but don't fail registration if notification creation fails
@@ -134,7 +138,7 @@ app.post('/api/register', async (req, res) => {
             await client.query('COMMIT');
             // Send the verification email
             const verificationLink = `${env.APP_URL}/verify-email?token=${verificationToken}`;
-            await (0, emailService_1.sendVerificationEmail)(email, username, verificationToken);
+            await sendVerificationEmail(email, username, verificationToken);
             console.log(`Verification link: ${verificationLink}`);
             res.status(201).json({
                 message: 'User created! Please check your email to verify your account.',
@@ -159,7 +163,7 @@ app.get('/api/user/goals', authenticateToken, async (req, res) => {
     try {
         const userId = req.user.id;
         // Query to get all goals for the user
-        const result = await db_1.pool.query(`SELECT * FROM user_goals WHERE user_id = $1 ORDER BY created_at DESC`, [userId]);
+        const result = await pool.query(`SELECT * FROM user_goals WHERE user_id = $1 ORDER BY created_at DESC`, [userId]);
         res.json(result.rows);
     }
     catch (error) {
@@ -176,13 +180,13 @@ app.post('/api/user/goals', authenticateToken, async (req, res) => {
             return res.status(400).json({ message: 'Required fields missing' });
         }
         // Insert new goal
-        const result = await db_1.pool.query(`INSERT INTO user_goals 
+        const result = await pool.query(`INSERT INTO user_goals 
         (user_id, title, description, category, target, current, unit, start_date, end_date, created_at) 
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
        RETURNING *`, [userId, title, description, category, target, 0, unit, startDate, endDate]);
         // Add this part - Record this activity
         const newGoalId = result.rows[0].id;
-        await db_1.pool.query(`INSERT INTO goal_activities 
+        await pool.query(`INSERT INTO goal_activities 
        (user_id, goal_id, activity_type, activity_date) 
        VALUES ($1, $2, 'created', NOW())`, [userId, newGoalId]);
         res.status(201).json(result.rows[0]);
@@ -205,19 +209,19 @@ app.put('/api/user/goals/:id', authenticateToken, async (req, res) => {
             return res.status(400).json({ message: 'Current progress value is required' });
         }
         // Get the goal's target to calculate progress percentage
-        const goalResult = await db_1.pool.query('SELECT * FROM user_goals WHERE id = $1 AND user_id = $2', [goalId, userId]);
+        const goalResult = await pool.query('SELECT * FROM user_goals WHERE id = $1 AND user_id = $2', [goalId, userId]);
         if (goalResult.rowCount === 0) {
             return res.status(404).json({ message: 'Goal not found' });
         }
         const goal = goalResult.rows[0];
         const progress = Math.min(Math.round((current / goal.target) * 100), 100);
         // Update the goal progress
-        const result = await db_1.pool.query(`UPDATE user_goals 
+        const result = await pool.query(`UPDATE user_goals 
        SET current = $1, progress = $2, updated_at = NOW()
        WHERE id = $3 AND user_id = $4
        RETURNING *`, [current, progress, goalId, userId]);
         // Add this part - Record this update activity
-        await db_1.pool.query(`INSERT INTO goal_activities 
+        await pool.query(`INSERT INTO goal_activities 
        (user_id, goal_id, activity_type, progress, activity_date) 
        VALUES ($1, $2, 'updated', $3, NOW())`, [userId, goalId, progress]);
         res.json(result.rows[0]);
@@ -232,7 +236,7 @@ app.delete('/api/user/goals/:id', authenticateToken, async (req, res) => {
         const userId = req.user.id;
         const goalId = req.params.id;
         // Delete the goal
-        await db_1.pool.query('DELETE FROM user_goals WHERE id = $1 AND user_id = $2', [goalId, userId]);
+        await pool.query('DELETE FROM user_goals WHERE id = $1 AND user_id = $2', [goalId, userId]);
         res.json({ message: 'Goal deleted successfully' });
     }
     catch (error) {
@@ -249,7 +253,7 @@ app.post('/api/reset-password-request', async (req, res) => {
         }
         console.log(`Processing password reset request for email: ${email}`);
         // Find user by email
-        const userResult = await db_1.pool.query('SELECT * FROM users WHERE email = $1', [email]);
+        const userResult = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
         // Don't reveal if email exists or not for security reasons
         if (userResult.rowCount === 0) {
             console.log(`No user found with email: ${email}`);
@@ -266,7 +270,7 @@ app.post('/api/reset-password-request', async (req, res) => {
         console.log(`Found user: ${user.username} (ID: ${user.id}), generating reset token`);
         try {
             // First check if table exists and create it if not
-            await db_1.pool.query(`
+            await pool.query(`
         CREATE TABLE IF NOT EXISTS password_reset_tokens (
           id SERIAL PRIMARY KEY,
           user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -277,8 +281,8 @@ app.post('/api/reset-password-request', async (req, res) => {
         )
       `);
             // Then try to insert or update the token
-            await db_1.pool.query('DELETE FROM password_reset_tokens WHERE user_id = $1', [user.id]);
-            await db_1.pool.query('INSERT INTO password_reset_tokens (user_id, token, expires_at) VALUES ($1, $2, $3)', [user.id, resetToken, expiresAt]);
+            await pool.query('DELETE FROM password_reset_tokens WHERE user_id = $1', [user.id]);
+            await pool.query('INSERT INTO password_reset_tokens (user_id, token, expires_at) VALUES ($1, $2, $3)', [user.id, resetToken, expiresAt]);
             console.log(`Reset token stored for user ${user.id}`);
         }
         catch (dbError) {
@@ -288,7 +292,7 @@ app.post('/api/reset-password-request', async (req, res) => {
         // Send password reset email
         try {
             console.log(`Attempting to send password reset email to ${email}`);
-            await (0, emailService_1.sendPasswordResetEmail)(email, user.username, resetToken);
+            await sendPasswordResetEmail(email, user.username, resetToken);
             console.log(`Password reset link: ${env.APP_URL}/reset-password?token=${resetToken}`);
         }
         catch (emailError) {
@@ -314,7 +318,7 @@ app.post('/api/verify-reset-token', async (req, res) => {
             return res.status(400).json({ message: 'Reset token is required' });
         }
         // Find token in database
-        const tokenResult = await db_1.pool.query('SELECT user_id, expires_at FROM password_reset_tokens WHERE token = $1', [token]);
+        const tokenResult = await pool.query('SELECT user_id, expires_at FROM password_reset_tokens WHERE token = $1', [token]);
         if (tokenResult.rowCount === 0) {
             return res.status(400).json({ message: 'Invalid or expired reset token' });
         }
@@ -339,7 +343,7 @@ app.post('/api/reset-password', async (req, res) => {
             return res.status(400).json({ message: 'Token and new password are required' });
         }
         // Find token in database
-        const tokenResult = await db_1.pool.query('SELECT user_id, expires_at FROM password_reset_tokens WHERE token = $1', [token]);
+        const tokenResult = await pool.query('SELECT user_id, expires_at FROM password_reset_tokens WHERE token = $1', [token]);
         if (tokenResult.rowCount === 0) {
             return res.status(400).json({ message: 'Invalid or expired reset token' });
         }
@@ -353,9 +357,9 @@ app.post('/api/reset-password', async (req, res) => {
         const saltRounds = 10;
         const hashedPassword = await bcrypt_1.default.hash(password, saltRounds);
         // Update user's password
-        await db_1.pool.query('UPDATE users SET password = $1 WHERE id = $2', [hashedPassword, tokenData.user_id]);
+        await pool.query('UPDATE users SET password = $1 WHERE id = $2', [hashedPassword, tokenData.user_id]);
         // Delete the used token
-        await db_1.pool.query('DELETE FROM password_reset_tokens WHERE token = $1', [token]);
+        await pool.query('DELETE FROM password_reset_tokens WHERE token = $1', [token]);
         res.json({ message: 'Password has been reset successfully' });
     }
     catch (error) {
@@ -365,7 +369,7 @@ app.post('/api/reset-password', async (req, res) => {
 });
 // Email verification endpoint - simplified for troubleshooting
 app.get('/api/verify-email', async (req, res) => {
-    const client = await db_1.pool.connect(); // Get a client for transaction
+    const client = await pool.connect(); // Get a client for transaction
     try {
         const { token: verificationToken } = req.query;
         if (!verificationToken) {
@@ -457,12 +461,12 @@ app.post('/api/contact', async (req, res) => {
             return res.status(400).json({ message: 'Please provide a valid email address' });
         }
         // Store the message in the database
-        const result = await db_1.pool.query('INSERT INTO contact_messages (name, email, message) VALUES ($1, $2, $3) RETURNING id', [name, email, message]);
+        const result = await pool.query('INSERT INTO contact_messages (name, email, message) VALUES ($1, $2, $3) RETURNING id', [name, email, message]);
         const messageId = result.rows[0].id;
         console.log('Contact message saved with ID:', messageId);
         // Create notification for admin
         try {
-            await notificationService_1.NotificationService.createContactMessageNotification(messageId, name, email);
+            await NotificationService.createContactMessageNotification(messageId, name, email);
         }
         catch (notificationError) {
             // Log but don't fail if notification creation fails
@@ -510,7 +514,7 @@ app.get('/api/admin/contact-messages', authenticateAdmin, async (req, res) => {
         query += ' ORDER BY created_at DESC LIMIT $' + paramIndex++ + ' OFFSET $' + paramIndex++;
         params.push(limit, offset);
         console.log('Contact messages query:', query, params);
-        const result = await db_1.pool.query(query, params);
+        const result = await pool.query(query, params);
         // Get total count for pagination
         let countQuery = 'SELECT COUNT(*) FROM contact_messages';
         const countParams = [];
@@ -534,7 +538,7 @@ app.get('/api/admin/contact-messages', authenticateAdmin, async (req, res) => {
             countParams.push(searchTerm);
         }
         console.log('Count query:', countQuery, countParams);
-        const countResult = await db_1.pool.query(countQuery, countParams);
+        const countResult = await pool.query(countQuery, countParams);
         const totalCount = parseInt(countResult.rows[0].count);
         res.json({
             messages: result.rows,
@@ -561,7 +565,7 @@ app.put('/api/admin/contact-messages/:id/status', authenticateAdmin, async (req,
             return res.status(400).json({ message: 'Invalid status value' });
         }
         // Update message status
-        const result = await db_1.pool.query('UPDATE contact_messages SET status = $1 WHERE id = $2 RETURNING *', [status, messageId]);
+        const result = await pool.query('UPDATE contact_messages SET status = $1 WHERE id = $2 RETURNING *', [status, messageId]);
         if (result.rowCount === 0) {
             return res.status(404).json({ message: 'Message not found' });
         }
@@ -578,7 +582,7 @@ app.put('/api/admin/contact-messages/:id/status', authenticateAdmin, async (req,
 // Admin Challenge Management endpoints
 app.get('/api/admin/challenges', authenticateAdmin, async (req, res) => {
     try {
-        const result = await db_1.pool.query(`SELECT id, title, description, category, difficulty, carbon_reduction, points, steps, benefits, 
+        const result = await pool.query(`SELECT id, title, description, category, difficulty, carbon_reduction, points, steps, benefits, 
       is_active, created_at FROM challenges ORDER BY created_at DESC`);
         res.json(result.rows);
     }
@@ -609,7 +613,7 @@ app.post('/api/admin/challenges', authenticateAdmin, async (req, res) => {
             stepsJson = []; // Default to empty array on error
         }
         // Insert challenge using JSONB for steps
-        const result = await db_1.pool.query(`INSERT INTO challenges 
+        const result = await pool.query(`INSERT INTO challenges 
         (title, description, category, difficulty, carbon_reduction, points, steps, benefits, is_active, created_at) 
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
        RETURNING *`, [title, description, category, difficulty, carbon_reduction, points, JSON.stringify(stepsJson), benefits, is_active ?? true]);
@@ -646,7 +650,7 @@ app.put('/api/admin/challenges/:id', authenticateAdmin, async (req, res) => {
             stepsJson = []; // Default to empty array on error
         }
         // Update challenge using JSONB for steps
-        const result = await db_1.pool.query(`UPDATE challenges SET
+        const result = await pool.query(`UPDATE challenges SET
         title = $1,
         description = $2,
         category = $3,
@@ -679,7 +683,7 @@ app.patch('/api/admin/challenges/:id/status', authenticateAdmin, async (req, res
         if (is_active === undefined) {
             return res.status(400).json({ message: 'is_active status is required' });
         }
-        const result = await db_1.pool.query('UPDATE challenges SET is_active = $1 WHERE id = $2 RETURNING *', [is_active, challengeId]);
+        const result = await pool.query('UPDATE challenges SET is_active = $1 WHERE id = $2 RETURNING *', [is_active, challengeId]);
         if (result.rowCount === 0) {
             return res.status(404).json({ message: 'Challenge not found' });
         }
@@ -694,12 +698,12 @@ app.delete('/api/admin/challenges/:id', authenticateAdmin, async (req, res) => {
     try {
         const challengeId = req.params.id;
         // First check if the challenge exists
-        const checkResult = await db_1.pool.query('SELECT id FROM challenges WHERE id = $1', [challengeId]);
+        const checkResult = await pool.query('SELECT id FROM challenges WHERE id = $1', [challengeId]);
         if (checkResult.rowCount === 0) {
             return res.status(404).json({ message: 'Challenge not found' });
         }
         // Then delete it
-        await db_1.pool.query('DELETE FROM challenges WHERE id = $1', [challengeId]);
+        await pool.query('DELETE FROM challenges WHERE id = $1', [challengeId]);
         res.json({ message: 'Challenge deleted successfully' });
     }
     catch (error) {
@@ -711,7 +715,7 @@ app.delete('/api/admin/challenges/:id', authenticateAdmin, async (req, res) => {
 app.get('/api/admin/challenges/popular', authenticateAdmin, async (req, res) => {
     try {
         // Query to get challenges with completion counts and rates
-        const result = await db_1.pool.query(`
+        const result = await pool.query(`
       SELECT 
         c.id,
         c.title,
@@ -734,7 +738,7 @@ app.get('/api/admin/challenges/popular', authenticateAdmin, async (req, res) => 
 // Admin Badge Management endpoints
 app.get('/api/admin/badges', authenticateAdmin, async (req, res) => {
     try {
-        const result = await db_1.pool.query(`SELECT id, name, icon, short_description, description, requirement, 
+        const result = await pool.query(`SELECT id, name, icon, short_description, description, requirement, 
       category, rarity, points, created_at FROM badges ORDER BY created_at DESC`);
         res.json(result.rows);
     }
@@ -751,7 +755,7 @@ app.post('/api/admin/badges', authenticateAdmin, async (req, res) => {
             return res.status(400).json({ message: 'Required fields missing' });
         }
         // Insert badge
-        const result = await db_1.pool.query(`INSERT INTO badges 
+        const result = await pool.query(`INSERT INTO badges 
         (name, icon, short_description, description, requirement, category, rarity, points, created_at) 
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
        RETURNING *`, [name, icon, short_description, description, requirement, category, rarity, points || 10]);
@@ -774,7 +778,7 @@ app.put('/api/admin/badges/:id', authenticateAdmin, async (req, res) => {
             return res.status(400).json({ message: 'Required fields missing' });
         }
         // Update badge
-        const result = await db_1.pool.query(`UPDATE badges SET
+        const result = await pool.query(`UPDATE badges SET
         name = $1,
         icon = $2,
         short_description = $3,
@@ -802,14 +806,14 @@ app.delete('/api/admin/badges/:id', authenticateAdmin, async (req, res) => {
     try {
         const badgeId = req.params.id;
         // First check if the badge exists
-        const checkResult = await db_1.pool.query('SELECT id FROM badges WHERE id = $1', [badgeId]);
+        const checkResult = await pool.query('SELECT id FROM badges WHERE id = $1', [badgeId]);
         if (checkResult.rowCount === 0) {
             return res.status(404).json({ message: 'Badge not found' });
         }
         // Delete related user badge entries first to maintain referential integrity
-        await db_1.pool.query('DELETE FROM user_badges WHERE badge_id = $1', [badgeId]);
+        await pool.query('DELETE FROM user_badges WHERE badge_id = $1', [badgeId]);
         // Then delete the badge
-        await db_1.pool.query('DELETE FROM badges WHERE id = $1', [badgeId]);
+        await pool.query('DELETE FROM badges WHERE id = $1', [badgeId]);
         res.json({ message: 'Badge deleted successfully' });
     }
     catch (error) {
@@ -822,7 +826,7 @@ app.post('/api/login', async (req, res) => {
     try {
         const { email, password } = req.body;
         // Find user in database
-        const result = await db_1.pool.query('SELECT * FROM users WHERE email = $1', [email]);
+        const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
         if (result.rowCount === 0) {
             return res.status(401).json({ message: 'Invalid credentials' });
         }
@@ -849,11 +853,11 @@ app.post('/api/login', async (req, res) => {
         // Get admin details if user is an admin
         let adminDetails = null;
         if (user.is_admin) {
-            const adminResult = await db_1.pool.query('SELECT admin_level, permissions FROM admin_users WHERE user_id = $1', [user.id]);
+            const adminResult = await pool.query('SELECT admin_level, permissions FROM admin_users WHERE user_id = $1', [user.id]);
             if (adminResult?.rowCount && adminResult.rowCount > 0) {
                 adminDetails = adminResult.rows[0];
                 // Update last admin login time
-                await db_1.pool.query('UPDATE admin_users SET last_admin_login = NOW() WHERE user_id = $1', [user.id]);
+                await pool.query('UPDATE admin_users SET last_admin_login = NOW() WHERE user_id = $1', [user.id]);
             }
         }
         // Generate token with isAdmin flag included
@@ -886,7 +890,7 @@ app.post('/api/admin/login', async (req, res) => {
     try {
         const { email, password } = req.body;
         // Find the admin user in the admin_users table
-        const adminResult = await db_1.pool.query('SELECT * FROM admin_users WHERE email = $1', [email]);
+        const adminResult = await pool.query('SELECT * FROM admin_users WHERE email = $1', [email]);
         if (adminResult.rowCount === 0) {
             return res.status(401).json({ message: 'Invalid admin credentials' });
         }
@@ -897,7 +901,7 @@ app.post('/api/admin/login', async (req, res) => {
             return res.status(401).json({ message: 'Invalid admin credentials' });
         }
         // Update last login time
-        await db_1.pool.query('UPDATE admin_users SET last_login = NOW() WHERE id = $1', [admin.id]);
+        await pool.query('UPDATE admin_users SET last_login = NOW() WHERE id = $1', [admin.id]);
         // Create admin details object
         const adminDetails = {
             admin_level: admin.admin_level,
@@ -932,7 +936,7 @@ app.get('/api/admin/settings', authenticateAdmin, async (req, res) => {
     try {
         const adminId = req.user.id;
         // Fetch admin user data
-        const adminResult = await db_1.pool.query('SELECT id, username, email, avatar, admin_level, permissions FROM admin_users WHERE id = $1', [adminId]);
+        const adminResult = await pool.query('SELECT id, username, email, avatar, admin_level, permissions FROM admin_users WHERE id = $1', [adminId]);
         if (adminResult.rowCount === 0) {
             return res.status(404).json({ message: 'Admin user not found' });
         }
@@ -960,12 +964,12 @@ app.put('/api/admin/settings/profile', authenticateAdmin, async (req, res) => {
             return res.status(400).json({ message: 'Username and email are required' });
         }
         // Check if email is already in use by another admin
-        const emailCheck = await db_1.pool.query('SELECT id FROM admin_users WHERE email = $1 AND id != $2', [email, adminId]);
+        const emailCheck = await pool.query('SELECT id FROM admin_users WHERE email = $1 AND id != $2', [email, adminId]);
         if (emailCheck?.rowCount && emailCheck.rowCount > 0) {
             return res.status(400).json({ message: 'Email is already in use by another admin user' });
         }
         // Update admin profile
-        await db_1.pool.query('UPDATE admin_users SET username = $1, email = $2, updated_at = NOW() WHERE id = $3', [username, email, adminId]);
+        await pool.query('UPDATE admin_users SET username = $1, email = $2, updated_at = NOW() WHERE id = $3', [username, email, adminId]);
         res.json({
             message: 'Admin profile updated successfully',
             user: {
@@ -989,7 +993,7 @@ app.put('/api/admin/settings/password', authenticateAdmin, async (req, res) => {
             return res.status(400).json({ message: 'Current password and new password are required' });
         }
         // Get current password from database
-        const result = await db_1.pool.query('SELECT password FROM admin_users WHERE id = $1', [adminId]);
+        const result = await pool.query('SELECT password FROM admin_users WHERE id = $1', [adminId]);
         if (result.rowCount === 0) {
             return res.status(404).json({ message: 'Admin user not found' });
         }
@@ -1003,7 +1007,7 @@ app.put('/api/admin/settings/password', authenticateAdmin, async (req, res) => {
         const saltRounds = 10;
         const hashedPassword = await bcrypt_1.default.hash(newPassword, saltRounds);
         // Update the password
-        await db_1.pool.query('UPDATE admin_users SET password = $1, updated_at = NOW() WHERE id = $2', [hashedPassword, adminId]);
+        await pool.query('UPDATE admin_users SET password = $1, updated_at = NOW() WHERE id = $2', [hashedPassword, adminId]);
         res.json({ message: 'Password updated successfully' });
     }
     catch (error) {
@@ -1019,7 +1023,7 @@ app.post('/api/admin/settings/avatar', authenticateAdmin, upload.single('avatar'
         const adminId = req.user.id;
         const avatarUrl = `/uploads/${req.file.filename}`;
         // Store avatar URL in the database
-        await db_1.pool.query('UPDATE admin_users SET avatar = $1, updated_at = NOW() WHERE id = $2', [avatarUrl, adminId]);
+        await pool.query('UPDATE admin_users SET avatar = $1, updated_at = NOW() WHERE id = $2', [avatarUrl, adminId]);
         res.json({
             message: 'Avatar uploaded successfully',
             avatarUrl
@@ -1034,9 +1038,9 @@ app.delete('/api/admin/settings/avatar', authenticateAdmin, async (req, res) => 
     try {
         const adminId = req.user.id;
         // First, get the current avatar to delete the file
-        const result = await db_1.pool.query('SELECT avatar FROM admin_users WHERE id = $1', [adminId]);
+        const result = await pool.query('SELECT avatar FROM admin_users WHERE id = $1', [adminId]);
         // Update the avatar to null in the database
-        await db_1.pool.query('UPDATE admin_users SET avatar = NULL, updated_at = NOW() WHERE id = $1', [adminId]);
+        await pool.query('UPDATE admin_users SET avatar = NULL, updated_at = NOW() WHERE id = $1', [adminId]);
         res.json({ message: 'Avatar deleted successfully' });
     }
     catch (error) {
@@ -1102,9 +1106,9 @@ app.get('/api/user/notifications', authenticateToken, async (req, res) => {
             limit: parseInt(limit),
             offset: parseInt(offset)
         };
-        const notifications = await notificationService_1.NotificationService.getUserNotifications(userId, options);
-        const unreadCount = await notificationService_1.NotificationService.getUserNotificationCount(userId, false);
-        const total = await notificationService_1.NotificationService.getUserNotificationCount(userId); // All notifications (read and unread)
+        const notifications = await NotificationService.getUserNotifications(userId, options);
+        const unreadCount = await NotificationService.getUserNotificationCount(userId, false);
+        const total = await NotificationService.getUserNotificationCount(userId); // All notifications (read and unread)
         res.json({
             notifications,
             unreadCount,
@@ -1120,7 +1124,7 @@ app.put('/api/user/notifications/:id/read', authenticateToken, async (req, res) 
     try {
         const userId = req.user.id;
         const notificationId = parseInt(req.params.id);
-        await notificationService_1.NotificationService.markUserNotificationAsRead(userId, notificationId);
+        await NotificationService.markUserNotificationAsRead(userId, notificationId);
         res.json({ message: 'Notification marked as read' });
     }
     catch (error) {
@@ -1131,7 +1135,7 @@ app.put('/api/user/notifications/:id/read', authenticateToken, async (req, res) 
 app.put('/api/user/notifications/read-all', authenticateToken, async (req, res) => {
     try {
         const userId = req.user.id;
-        await notificationService_1.NotificationService.markAllUserNotificationsAsRead(userId);
+        await NotificationService.markAllUserNotificationsAsRead(userId);
         res.json({ message: 'All notifications marked as read' });
     }
     catch (error) {
@@ -1142,7 +1146,7 @@ app.put('/api/user/notifications/read-all', authenticateToken, async (req, res) 
 // Admin user management endpoints
 app.get('/api/admin/users', authenticateAdmin, async (req, res) => {
     try {
-        const result = await db_1.pool.query(`
+        const result = await pool.query(`
       SELECT 
         u.id,
         u.username,
@@ -1176,7 +1180,7 @@ app.post('/api/admin/users', authenticateAdmin, async (req, res) => {
             return res.status(400).json({ message: 'Username, email, and password are required' });
         }
         // Check if email already exists
-        const emailCheck = await db_1.pool.query('SELECT id FROM users WHERE email = $1', [email]);
+        const emailCheck = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
         if (emailCheck?.rowCount && emailCheck.rowCount > 0) {
             return res.status(400).json({ message: 'Email already in use' });
         }
@@ -1189,14 +1193,14 @@ app.post('/api/admin/users', authenticateAdmin, async (req, res) => {
         let userResult;
         if (avatar) {
             // Create user
-            userResult = await db_1.pool.query(`INSERT INTO users 
+            userResult = await pool.query(`INSERT INTO users 
        (username, email, password, is_verified, is_active, avatar, created_at) 
        VALUES ($1, $2, $3, $4, $5, $6, NOW()) 
        RETURNING id, username, email, is_verified, is_active, created_at, avatar`, [username, email, hashedPassword, is_verified, is_active, avatar]);
         }
         else {
             // Original query without avatar
-            userResult = await db_1.pool.query(`INSERT INTO users 
+            userResult = await pool.query(`INSERT INTO users 
        (username, email, password, is_verified, is_active, created_at) 
        VALUES ($1, $2, $3, $4, $5, NOW()) 
        RETURNING id, username, email, is_verified, is_active, created_at, avatar`, [username, email, hashedPassword, is_verified, is_active]);
@@ -1216,13 +1220,13 @@ app.put('/api/admin/users/:id', authenticateAdmin, async (req, res) => {
         const userId = req.params.id;
         const { username, email, status, role, password } = req.body;
         // Check if user exists
-        const userCheck = await db_1.pool.query('SELECT * FROM users WHERE id = $1', [userId]);
+        const userCheck = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
         if (userCheck.rowCount === 0) {
             return res.status(404).json({ message: 'User not found' });
         }
         // Check if the email is already used by another user
         if (email) {
-            const emailCheck = await db_1.pool.query('SELECT id FROM users WHERE email = $1 AND id != $2', [email, userId]);
+            const emailCheck = await pool.query('SELECT id FROM users WHERE email = $1 AND id != $2', [email, userId]);
             if (emailCheck?.rowCount && emailCheck.rowCount > 0) {
                 return res.status(400).json({ message: 'Email already in use by another user' });
             }
@@ -1265,24 +1269,24 @@ app.put('/api/admin/users/:id', authenticateAdmin, async (req, res) => {
       WHERE id = $${paramCount} 
       RETURNING id, username, email, is_verified, is_active, created_at, avatar
     `;
-        const result = await db_1.pool.query(updateQuery, values);
+        const result = await pool.query(updateQuery, values);
         // Handle admin status change if needed
         if (role !== undefined) {
             const isAdmin = role === 'admin';
             if (isAdmin) {
                 // Check if user already exists in admin_users
-                const adminCheck = await db_1.pool.query('SELECT id FROM admin_users WHERE id = $1', // Change user_id to id
+                const adminCheck = await pool.query('SELECT id FROM admin_users WHERE id = $1', // Change user_id to id
                 [userId]);
                 if (adminCheck.rowCount === 0) {
                     // Add new admin user
-                    await db_1.pool.query(`INSERT INTO admin_users (id, username, email, admin_level, created_at)
+                    await pool.query(`INSERT INTO admin_users (id, username, email, admin_level, created_at)
              VALUES ($1, $2, $3, 'editor', NOW())`, // Change user_id to id
                     [userId, username || result.rows[0].username, email || result.rows[0].email]);
                 }
             }
             else {
                 // Remove from admin_users if demoted
-                await db_1.pool.query('DELETE FROM admin_users WHERE id = $1', [userId]); // Change user_id to id
+                await pool.query('DELETE FROM admin_users WHERE id = $1', [userId]); // Change user_id to id
             }
         }
         res.json({
@@ -1304,12 +1308,12 @@ app.delete('/api/admin/users/:id', authenticateAdmin, async (req, res) => {
             return res.status(400).json({ message: 'Cannot delete your own account' });
         }
         // Check if user exists
-        const userCheck = await db_1.pool.query('SELECT * FROM users WHERE id = $1', [userId]);
+        const userCheck = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
         if (userCheck.rowCount === 0) {
             return res.status(404).json({ message: 'User not found' });
         }
         // Delete user - assumes cascading deletes in your database
-        await db_1.pool.query('DELETE FROM users WHERE id = $1', [userId]);
+        await pool.query('DELETE FROM users WHERE id = $1', [userId]);
         res.json({ message: 'User deleted successfully' });
     }
     catch (error) {
@@ -1325,7 +1329,7 @@ app.put('/api/admin/users/:id/status', authenticateAdmin, async (req, res) => {
             return res.status(400).json({ message: 'Invalid status value' });
         }
         // Update user status
-        await db_1.pool.query('UPDATE users SET is_active = $1 WHERE id = $2', [status === 'active', userId]);
+        await pool.query('UPDATE users SET is_active = $1 WHERE id = $2', [status === 'active', userId]);
         res.json({
             message: `User status updated to ${status}`,
             status
@@ -1349,13 +1353,13 @@ app.post('/api/admin/users/bulk', authenticateAdmin, async (req, res) => {
         }
         switch (action) {
             case 'activate':
-                await db_1.pool.query('UPDATE users SET is_active = TRUE WHERE id = ANY($1::int[])', [userIds]);
+                await pool.query('UPDATE users SET is_active = TRUE WHERE id = ANY($1::int[])', [userIds]);
                 break;
             case 'deactivate':
-                await db_1.pool.query('UPDATE users SET is_active = FALSE WHERE id = ANY($1::int[])', [userIds]);
+                await pool.query('UPDATE users SET is_active = FALSE WHERE id = ANY($1::int[])', [userIds]);
                 break;
             case 'delete':
-                await db_1.pool.query('DELETE FROM users WHERE id = ANY($1::int[])', [userIds]);
+                await pool.query('DELETE FROM users WHERE id = ANY($1::int[])', [userIds]);
                 break;
             default:
                 return res.status(400).json({ message: 'Invalid action' });
@@ -1392,7 +1396,7 @@ app.post('/api/resend-verification', async (req, res) => {
     try {
         const { email } = req.body;
         // Find user by email
-        const userResult = await db_1.pool.query('SELECT * FROM users WHERE email = $1', [email]);
+        const userResult = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
         if (userResult.rowCount === 0) {
             // Don't reveal that email doesn't exist for security
             return res.status(200).json({
@@ -1405,16 +1409,16 @@ app.post('/api/resend-verification', async (req, res) => {
             return res.status(400).json({ message: 'Email is already verified' });
         }
         // Delete any existing verification tokens
-        await db_1.pool.query('DELETE FROM email_verification WHERE user_id = $1', [user.id]);
+        await pool.query('DELETE FROM email_verification WHERE user_id = $1', [user.id]);
         // Create new verification token
         const verificationToken = generateToken();
         const expiresAt = new Date();
         expiresAt.setHours(expiresAt.getHours() + 24); // Token valid for 24 hours
         // Store verification token
-        await db_1.pool.query('INSERT INTO email_verification (user_id, token, expires_at) VALUES ($1, $2, $3)', [user.id, verificationToken, expiresAt]);
+        await pool.query('INSERT INTO email_verification (user_id, token, expires_at) VALUES ($1, $2, $3)', [user.id, verificationToken, expiresAt]);
         // Send the verification email
         const verificationLink = `${env.APP_URL}/verify-email?token=${verificationToken}`;
-        await (0, emailService_1.sendVerificationEmail)(email, user.username, verificationToken);
+        await sendVerificationEmail(email, user.username, verificationToken);
         console.log(`New verification link: ${verificationLink}`);
         res.json({
             message: 'If your email exists in our system, a verification link will be sent',
@@ -1430,10 +1434,10 @@ app.post('/api/resend-verification', async (req, res) => {
 app.get('/api/admin/dashboard', authenticateAdmin, async (req, res) => {
     try {
         // Get stats for admin dashboard
-        const totalUsersResult = await db_1.pool.query('SELECT COUNT(*) FROM users');
-        const totalChallengesResult = await db_1.pool.query('SELECT COUNT(*) FROM challenges');
-        const completedChallengesResult = await db_1.pool.query('SELECT COUNT(*) FROM user_challenges WHERE completed = TRUE');
-        const usersThisMonthResult = await db_1.pool.query('SELECT COUNT(*) FROM users WHERE created_at > NOW() - INTERVAL \'30 days\'');
+        const totalUsersResult = await pool.query('SELECT COUNT(*) FROM users');
+        const totalChallengesResult = await pool.query('SELECT COUNT(*) FROM challenges');
+        const completedChallengesResult = await pool.query('SELECT COUNT(*) FROM user_challenges WHERE completed = TRUE');
+        const usersThisMonthResult = await pool.query('SELECT COUNT(*) FROM users WHERE created_at > NOW() - INTERVAL \'30 days\'');
         const stats = {
             totalUsers: parseInt(totalUsersResult.rows[0].count),
             totalChallenges: parseInt(totalChallengesResult.rows[0].count),
@@ -1456,7 +1460,7 @@ app.post('/api/admin/user/:id/toggle-admin', authenticateAdmin, async (req, res)
             return res.status(400).json({ message: 'Cannot change your own admin status' });
         }
         // Get current admin status
-        const userResult = await db_1.pool.query('SELECT is_admin FROM users WHERE id = $1', [userId]);
+        const userResult = await pool.query('SELECT is_admin FROM users WHERE id = $1', [userId]);
         if (userResult.rowCount === 0) {
             return res.status(404).json({ message: 'User not found' });
         }
@@ -1486,8 +1490,8 @@ app.get('/api/admin/notifications', authenticateAdmin, async (req, res) => {
             options.offset = parseInt(offset);
         if (type)
             options.type = type;
-        const notifications = await notificationService_1.NotificationService.getNotifications(options);
-        const unreadCount = await notificationService_1.NotificationService.getNotificationCount(false);
+        const notifications = await NotificationService.getNotifications(options);
+        const unreadCount = await NotificationService.getNotificationCount(false);
         res.json({
             notifications,
             unreadCount
@@ -1501,7 +1505,7 @@ app.get('/api/admin/notifications', authenticateAdmin, async (req, res) => {
 app.put('/api/admin/notifications/:id/read', authenticateAdmin, async (req, res) => {
     try {
         const notificationId = parseInt(req.params.id);
-        await notificationService_1.NotificationService.markAsRead(notificationId);
+        await NotificationService.markAsRead(notificationId);
         res.json({ message: 'Notification marked as read' });
     }
     catch (error) {
@@ -1511,7 +1515,7 @@ app.put('/api/admin/notifications/:id/read', authenticateAdmin, async (req, res)
 });
 app.put('/api/admin/notifications/read-all', authenticateAdmin, async (req, res) => {
     try {
-        await notificationService_1.NotificationService.markAllAsRead();
+        await NotificationService.markAllAsRead();
         res.json({ message: 'All notifications marked as read' });
     }
     catch (error) {
@@ -1528,9 +1532,9 @@ app.post('/api/admin/notifications/announcement', authenticateAdmin, async (req,
             return res.status(400).json({ message: 'Title and message are required' });
         }
         // Use the notification service to send announcement to all users
-        const sentCount = await notificationService_1.NotificationService.createSystemAnnouncementForAllUsers(title, message);
+        const sentCount = await NotificationService.createSystemAnnouncementForAllUsers(title, message);
         // Also create an admin notification for record keeping
-        await notificationService_1.NotificationService.createNotification('admin_announcement', 'System Announcement Sent', `Admin ${req.user.email} sent announcement: "${title}"`, undefined, 'system_announcement');
+        await NotificationService.createNotification('admin_announcement', 'System Announcement Sent', `Admin ${req.user.email} sent announcement: "${title}"`, undefined, 'system_announcement');
         res.json({
             message: 'Announcement sent successfully to all users',
             sentCount
@@ -1621,7 +1625,7 @@ app.get('/api/admin/user-growth', authenticateAdmin, async (req, res) => {
       ORDER BY
         period_date
     `;
-        const result = await db_1.pool.query(userGrowthQuery);
+        const result = await pool.query(userGrowthQuery);
         res.json(result.rows);
     }
     catch (error) {
@@ -1643,7 +1647,7 @@ app.get('/api/user/settings', authenticateToken, async (req, res) => {
     try {
         const userId = req.user.id;
         // Fetch user profile data
-        const userResult = await db_1.pool.query('SELECT id, username, email, location, bio, avatar, created_at, show_on_leaderboard FROM users WHERE id = $1', [userId]);
+        const userResult = await pool.query('SELECT id, username, email, location, bio, avatar, created_at, show_on_leaderboard FROM users WHERE id = $1', [userId]);
         if (userResult.rowCount === 0) {
             return res.status(404).json({ message: 'User not found' });
         }
@@ -1672,7 +1676,7 @@ app.put('/api/user/settings/profile', authenticateToken, async (req, res) => {
         const userId = req.user.id;
         const { username, email, location, bio } = req.body;
         // Update user profile
-        await db_1.pool.query('UPDATE users SET username = $1, email = $2, location = $3, bio = $4 WHERE id = $5', [username, email, location, bio, userId]);
+        await pool.query('UPDATE users SET username = $1, email = $2, location = $3, bio = $4 WHERE id = $5', [username, email, location, bio, userId]);
         res.json({ message: 'Profile settings updated successfully' });
     }
     catch (error) {
@@ -1685,7 +1689,7 @@ app.put('/api/user/change-password', authenticateToken, async (req, res) => {
         const userId = req.user.id;
         const { currentPassword, newPassword } = req.body;
         // Get current password from database
-        const result = await db_1.pool.query('SELECT password FROM users WHERE id = $1', [userId]);
+        const result = await pool.query('SELECT password FROM users WHERE id = $1', [userId]);
         const user = result.rows[0];
         // Verify current password
         const passwordMatch = await bcrypt_1.default.compare(currentPassword, user.password);
@@ -1696,7 +1700,7 @@ app.put('/api/user/change-password', authenticateToken, async (req, res) => {
         const saltRounds = 10;
         const hashedPassword = await bcrypt_1.default.hash(newPassword, saltRounds);
         // Update the password
-        await db_1.pool.query('UPDATE users SET password = $1 WHERE id = $2', [hashedPassword, userId]);
+        await pool.query('UPDATE users SET password = $1 WHERE id = $2', [hashedPassword, userId]);
         res.json({ message: 'Password updated successfully' });
     }
     catch (error) {
@@ -1712,7 +1716,7 @@ app.post('/api/user/avatar', authenticateToken, upload.single('avatar'), async (
         const userId = req.user.id;
         const avatarUrl = `/uploads/${req.file.filename}`;
         // Store avatar URL in the database
-        await db_1.pool.query('UPDATE users SET avatar = $1 WHERE id = $2', [avatarUrl, userId]);
+        await pool.query('UPDATE users SET avatar = $1 WHERE id = $2', [avatarUrl, userId]);
         res.json({
             message: 'Avatar uploaded successfully',
             avatarUrl
@@ -1728,9 +1732,9 @@ app.delete('/api/user/avatar', authenticateToken, async (req, res) => {
     try {
         const userId = req.user.id;
         // First, get the current avatar to delete the file
-        const result = await db_1.pool.query('SELECT avatar FROM users WHERE id = $1', [userId]);
+        const result = await pool.query('SELECT avatar FROM users WHERE id = $1', [userId]);
         // Update the avatar to null in the database
-        await db_1.pool.query('UPDATE users SET avatar = NULL WHERE id = $1', [userId]);
+        await pool.query('UPDATE users SET avatar = NULL WHERE id = $1', [userId]);
         res.json({ message: 'Avatar deleted successfully' });
     }
     catch (error) {
@@ -1743,7 +1747,7 @@ app.get('/api/challenges', authenticateToken, async (req, res) => {
     try {
         const userId = req.user.id;
         // Get all challenges with user progress
-        const result = await db_1.pool.query(`
+        const result = await pool.query(`
       SELECT c.*, 
         CASE WHEN uc.completed = true THEN true ELSE false END as completed,
         COALESCE(uc.progress, 0) as progress
@@ -1760,7 +1764,7 @@ app.get('/api/challenges', authenticateToken, async (req, res) => {
 });
 // Update the complete a challenge endpoint to handle missing points column
 app.post('/api/challenges/:id/complete', authenticateToken, async (req, res) => {
-    const client = await db_1.pool.connect();
+    const client = await pool.connect();
     try {
         const userId = req.user.id;
         const challengeId = req.params.id;
@@ -1782,7 +1786,7 @@ app.post('/api/challenges/:id/complete', authenticateToken, async (req, res) => 
             // Create new record
             await client.query('INSERT INTO user_challenges (user_id, challenge_id, completed, progress, completed_at) VALUES ($1, $2, true, 100, NOW())', [userId, challengeId]);
             try {
-                await notificationService_1.NotificationService.createChallengeCompletedNotification(userId, +challengeId, challenge.title, challenge.points);
+                await NotificationService.createChallengeCompletedNotification(userId, +challengeId, challenge.title, challenge.points);
             }
             catch (notificationError) {
                 console.error('Error creating challenge completion notification:', notificationError);
@@ -1839,7 +1843,7 @@ app.post('/api/challenges/:id/complete', authenticateToken, async (req, res) => 
        AND reference_id = $2`, [userId, rank]);
                 // If no notification exists for this rank, create one
                 if (existingNotification.rowCount === 0) {
-                    await notificationService_1.NotificationService.createLeaderboardTopPositionNotification(userId, rank);
+                    await NotificationService.createLeaderboardTopPositionNotification(userId, rank);
                     console.log(`Created top ${rank} leaderboard position notification for user ${userId}`);
                 }
             }
@@ -1879,7 +1883,7 @@ app.post('/api/challenges/:id/complete', authenticateToken, async (req, res) => 
                         // Add badge to user's badges
                         await client.query('INSERT INTO user_badges (user_id, badge_id, earned_at) VALUES ($1, $2, NOW())', [userId, badge.id]);
                         // Create notification for the new badge
-                        await notificationService_1.NotificationService.createBadgeEarnedNotification(userId, badge.id, badgeName);
+                        await NotificationService.createBadgeEarnedNotification(userId, badge.id, badgeName);
                         console.log(`User ${userId} earned badge: ${badgeName}`);
                     }
                 }
@@ -1909,7 +1913,7 @@ app.get('/api/badges', authenticateToken, async (req, res) => {
     try {
         const userId = req.user.id;
         // Get all badges with earned status
-        const result = await db_1.pool.query(`
+        const result = await pool.query(`
       SELECT b.*, 
         CASE WHEN ub.id IS NOT NULL THEN true ELSE false END as earned,
         ub.earned_at
@@ -1929,7 +1933,7 @@ app.get('/api/badges/earned', authenticateToken, async (req, res) => {
     try {
         const userId = req.user.id;
         // Get only earned badges
-        const result = await db_1.pool.query(`
+        const result = await pool.query(`
       SELECT b.*, ub.earned_at
       FROM badges b
       JOIN user_badges ub ON b.id = ub.badge_id
@@ -1947,7 +1951,7 @@ app.get('/api/badges/earned', authenticateToken, async (req, res) => {
 app.get('/api/badges/all-badges', authenticateToken, async (req, res) => {
     try {
         // Get all badges without user-specific data
-        const result = await db_1.pool.query(`
+        const result = await pool.query(`
       SELECT id, name, icon, category, rarity
       FROM badges
       ORDER BY id
@@ -2017,10 +2021,10 @@ app.get('/api/leaderboard', authenticateToken, async (req, res) => {
     `;
         let result;
         if (activityFilter !== 'all') {
-            result = await db_1.pool.query(leaderboardQuery, [activityFilter]);
+            result = await pool.query(leaderboardQuery, [activityFilter]);
         }
         else {
-            result = await db_1.pool.query(leaderboardQuery);
+            result = await pool.query(leaderboardQuery);
         }
         console.log(`Leaderboard query returned ${result.rows.length} rows`);
         // Log the raw data for the first few users for debugging
@@ -2076,7 +2080,7 @@ app.put('/api/user/settings/leaderboard', authenticateToken, async (req, res) =>
         const userId = req.user.id;
         const { showOnLeaderboard } = req.body;
         // Update user's leaderboard visibility setting
-        await db_1.pool.query('UPDATE users SET show_on_leaderboard = $1 WHERE id = $2', [showOnLeaderboard, userId]);
+        await pool.query('UPDATE users SET show_on_leaderboard = $1 WHERE id = $2', [showOnLeaderboard, userId]);
         res.json({ message: 'Leaderboard visibility updated successfully' });
     }
     catch (error) {
@@ -2095,7 +2099,7 @@ app.get('/api/leaderboard/user-rank', authenticateToken, async (req, res) => {
       FROM users
       WHERE id = $1
     `;
-        const settingsResult = await db_1.pool.query(userSettingsQuery, [userId]);
+        const settingsResult = await pool.query(userSettingsQuery, [userId]);
         const showOnLeaderboard = settingsResult.rows[0]?.show_on_leaderboard !== false;
         // More direct query for user stats
         const userStatsQuery = `
@@ -2108,7 +2112,7 @@ app.get('/api/leaderboard/user-rank', authenticateToken, async (req, res) => {
       WHERE u.id = $1
       GROUP BY u.id
     `;
-        const userResult = await db_1.pool.query(userStatsQuery, [userId]);
+        const userResult = await pool.query(userStatsQuery, [userId]);
         // Log the raw user data
         console.log("Raw user stats query result:", userResult.rows[0]);
         // Default to 0 if no results
@@ -2116,7 +2120,7 @@ app.get('/api/leaderboard/user-rank', authenticateToken, async (req, res) => {
         const userCarbonSaved = Number(userResult.rows[0]?.carbon_saved || 0);
         console.log(`User points: ${userPoints}, Carbon saved: ${userCarbonSaved}`);
         // Find how many users have more points
-        const rankResult = await db_1.pool.query(`
+        const rankResult = await pool.query(`
       SELECT COUNT(*) AS rank
       FROM (
         SELECT u.id, COALESCE(SUM(c.points) FILTER (WHERE uc.completed = TRUE), 0) AS points
@@ -2139,7 +2143,7 @@ app.get('/api/leaderboard/user-rank', authenticateToken, async (req, res) => {
             hideFromLeaderboard: !showOnLeaderboard // Add this property to the response
         };
         // Find points needed for next rank
-        const nextRankResult = await db_1.pool.query(`
+        const nextRankResult = await pool.query(`
       SELECT MIN(points) AS next_rank_points
       FROM (
         SELECT u.id, COALESCE(SUM(c.points) FILTER (WHERE uc.completed = TRUE), 0) AS points
@@ -2172,7 +2176,7 @@ app.get('/api/user/activity/challenges', authenticateToken, async (req, res) => 
     try {
         const userId = req.user.id;
         const limit = req.query.limit ? parseInt(req.query.limit) : 10;
-        const result = await db_1.pool.query(`
+        const result = await pool.query(`
       SELECT uc.id, c.id as challenge_id, c.title, c.points, uc.completed_at
       FROM user_challenges uc
       JOIN challenges c ON uc.challenge_id = c.id
@@ -2192,7 +2196,7 @@ app.get('/api/user/activity/badges', authenticateToken, async (req, res) => {
     try {
         const userId = req.user.id;
         const limit = req.query.limit ? parseInt(req.query.limit) : 10;
-        const result = await db_1.pool.query(`
+        const result = await pool.query(`
       SELECT ub.id, b.id as badge_id, b.name, b.icon, b.points, ub.earned_at
       FROM user_badges ub
       JOIN badges b ON ub.badge_id = b.id
@@ -2213,7 +2217,7 @@ app.get('/api/user/activity/goals', authenticateToken, async (req, res) => {
         const userId = req.user.id;
         const limit = req.query.limit ? parseInt(req.query.limit) : 10;
         // First check if the goal_activities table exists
-        const tableCheckResult = await db_1.pool.query(`
+        const tableCheckResult = await pool.query(`
       SELECT EXISTS (
         SELECT FROM information_schema.tables 
         WHERE table_schema = 'public'
@@ -2225,7 +2229,7 @@ app.get('/api/user/activity/goals', authenticateToken, async (req, res) => {
             return res.json([]);
         }
         // Table exists, query it
-        const result = await db_1.pool.query(`
+        const result = await pool.query(`
       SELECT ga.id, ga.goal_id, ug.title, ga.activity_type, ga.progress, ga.activity_date
       FROM goal_activities ga
       JOIN user_goals ug ON ga.goal_id = ug.id
@@ -2245,10 +2249,10 @@ app.put('/api/user/archive', authenticateToken, async (req, res) => {
     try {
         const userId = req.user.id;
         // Update user to set is_active to false (archive the account)
-        await db_1.pool.query('UPDATE users SET is_active = FALSE WHERE id = $1', [userId]);
+        await pool.query('UPDATE users SET is_active = FALSE WHERE id = $1', [userId]);
         // Create a notification for admin
         try {
-            await notificationService_1.NotificationService.createNotification('user_account_archived', 'User Account Archived', `User ID: ${userId} has archived their account`, userId);
+            await NotificationService.createNotification('user_account_archived', 'User Account Archived', `User ID: ${userId} has archived their account`, userId);
         }
         catch (notificationError) {
             // Log but don't fail if notification creation fails

@@ -264,3 +264,4 @@ class NotificationService {
     }
 }
 exports.NotificationService = NotificationService;
+exports.default = NotificationService;
