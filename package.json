@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build", 
-    "start": "node build/index.js"
+    "build": "tsc --project backend/tsconfig.json && vite build", 
+     "start": "node build/backend/index.js"
   },
   "prettier": {
     "arrowParens": "avoid",
