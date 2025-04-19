@@ -47,3 +47,5 @@ console.log(`Environment variables loaded:
   JWT_SECRET: ${env.JWT_SECRET ? '(exists)' : '(undefined)'}
   DATABASE_URL: ${env.DATABASE_URL ? '(exists)' : '(undefined)'}
 `)
+
+export default env;
