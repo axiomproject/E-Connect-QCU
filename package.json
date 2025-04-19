@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
    "build": "tsc --project backend/tsconfig.json && vite build && ls -lR build",
-    "start": "node dist/backend/index.js"
+    "start": "node build/backend/index.js"
   },
   "prettier": {
     "arrowParens": "avoid",
