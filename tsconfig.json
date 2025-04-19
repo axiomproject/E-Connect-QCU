@@ -32,9 +32,6 @@
     "src/**/*.ts",
     "vite.config.ts",
     "./backend/**/*.ts",
-    "./lib/**/*.ts",
-    "index.ts", 
-    "backend/**/*.ts"
-  ],
-  "exclude": ["node_modules", "src/**/*.ts", "src/**/*.vue"]
+    "./lib/**/*.ts"
+  ]
 }
