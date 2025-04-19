@@ -937,6 +937,24 @@ export default {
     height: 26px;
     font-size: 0.7rem;
   }
+
+  /* Hide all columns except Email (2) and Actions (6) on small screens */
+  .messages-table th:nth-child(1),
+  .messages-table th:nth-child(3),
+  .messages-table th:nth-child(4),
+  .messages-table th:nth-child(5),
+  .messages-table td:nth-child(1),
+  .messages-table td:nth-child(3),
+  .messages-table td:nth-child(4),
+  .messages-table td:nth-child(5) {
+    display: none;
+  }
+
+  /* Ensure horizontal scroll is available */
+  .messages-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
 }
 
 /* Very small screens (phones) */

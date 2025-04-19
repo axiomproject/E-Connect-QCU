@@ -1526,6 +1526,14 @@
     .email-col, .date-col {
       display: none;
     }
+
+    .users-table th.status-col,
+    .users-table th.date-col,
+    .users-table td:nth-child(5), /* Status */
+    .users-table td:nth-child(6)  /* Joined */
+    {
+      display: none;
+    }
   }
   
   @media (max-width: 768px) {
@@ -1602,9 +1610,9 @@
   .users-table th.email-col,
   .users-table td.email-cell,
   .users-table th.status-col,
-  .users-table td.status-col,
+  .users-table td:nth-child(5), /* Status */
   .users-table th.date-col,
-  .users-table td.date-col,
+  .users-table td:nth-child(6), /* Joined */
   .users-table th.avatar-col,
   .users-table td:nth-child(2) { /* Hide avatar column */
     display: none !important;

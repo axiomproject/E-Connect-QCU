@@ -1,6 +1,6 @@
 <template>
   <div class="admin-layout">
-    <AdminLayout pageTitle="Admin Dashboard">
+    <AdminLayout pageTitle="Dashboard">
 
       <div class="admin-dashboard">
         <div class="stats-cards">
