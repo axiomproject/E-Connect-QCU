@@ -4,7 +4,8 @@ const { env } = require('./env');
 import cors from 'cors'
 import bodyParser from 'body-parser'
 import jwt from 'jsonwebtoken'
-import { pool } from './db' // Import the database pool
+import * as dbModule from './db';
+const pool = dbModule.pool;
 import bcrypt from 'bcrypt' // Import bcrypt
 import crypto from 'crypto' // For generating verification tokens
 import { sendVerificationEmail, sendPasswordResetEmail } from './services/emailService' // Import email service
