@@ -2,6 +2,7 @@ import vue from '@vitejs/plugin-vue'
 import path from 'path'
 import { defineConfig, type Plugin } from 'vite'
 import mixPlugin, { type Adapter } from 'vite-plugin-mix'
+import commonjs from '@rollup/plugin-commonjs';
 
 // Fix mix plugin to work with ESM and typescript [[
 interface MixConfig {

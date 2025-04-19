@@ -1,14 +1,17 @@
-import { pool } from '../db';
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.NotificationService = void 0;
+const db_1 = require("../db");
 /**
  * Service for handling notifications
  */
-export class NotificationService {
+class NotificationService {
     /**
      * Create a new admin notification
      */
     static async createNotification(type, title, message, referenceId, referenceType) {
         try {
-            const result = await pool.query(`INSERT INTO admin_notifications 
+            const result = await db_1.pool.query(`INSERT INTO admin_notifications 
         (type, title, message, reference_id, reference_type, created_at) 
         VALUES ($1, $2, $3, $4, $5, NOW()) 
         RETURNING id`, [type, title, message, referenceId, referenceType]);
@@ -24,7 +27,7 @@ export class NotificationService {
      */
     static async createUserNotification(userId, type, title, message, referenceId, referenceType) {
         try {
-            const result = await pool.query(`INSERT INTO user_notifications 
+            const result = await db_1.pool.query(`INSERT INTO user_notifications 
         (user_id, type, title, message, reference_id, reference_type, created_at) 
         VALUES ($1, $2, $3, $4, $5, $6, NOW()) 
         RETURNING id`, [userId, type, title, message, referenceId, referenceType]);
@@ -66,7 +69,7 @@ export class NotificationService {
                     queryParams.push(options.offset);
                 }
             }
-            const result = await pool.query(query, queryParams);
+            const result = await db_1.pool.query(query, queryParams);
             return result.rows;
         }
         catch (error) {
@@ -101,7 +104,7 @@ export class NotificationService {
                     queryParams.push(options.offset);
                 }
             }
-            const result = await pool.query(query, queryParams);
+            const result = await db_1.pool.query(query, queryParams);
             return result.rows;
         }
         catch (error) {
@@ -114,7 +117,7 @@ export class NotificationService {
      */
     static async getNotificationCount(isRead = false) {
         try {
-            const result = await pool.query('SELECT COUNT(*) FROM admin_notifications WHERE is_read = $1', [isRead]);
+            const result = await db_1.pool.query('SELECT COUNT(*) FROM admin_notifications WHERE is_read = $1', [isRead]);
             return parseInt(result.rows[0].count);
         }
         catch (error) {
@@ -127,7 +130,7 @@ export class NotificationService {
      */
     static async getUserNotificationCount(userId, isRead = false) {
         try {
-            const result = await pool.query('SELECT COUNT(*) FROM user_notifications WHERE user_id = $1 AND is_read = $2', [userId, isRead]);
+            const result = await db_1.pool.query('SELECT COUNT(*) FROM user_notifications WHERE user_id = $1 AND is_read = $2', [userId, isRead]);
             return parseInt(result.rows[0].count);
         }
         catch (error) {
@@ -140,7 +143,7 @@ export class NotificationService {
      */
     static async markAsRead(notificationId) {
         try {
-            await pool.query('UPDATE admin_notifications SET is_read = TRUE, read_at = NOW() WHERE id = $1', [notificationId]);
+            await db_1.pool.query('UPDATE admin_notifications SET is_read = TRUE, read_at = NOW() WHERE id = $1', [notificationId]);
         }
         catch (error) {
             console.error('Error marking notification as read:', error);
@@ -152,7 +155,7 @@ export class NotificationService {
      */
     static async markUserNotificationAsRead(userId, notificationId) {
         try {
-            await pool.query('UPDATE user_notifications SET is_read = TRUE, read_at = NOW() WHERE id = $1 AND user_id = $2', [notificationId, userId]);
+            await db_1.pool.query('UPDATE user_notifications SET is_read = TRUE, read_at = NOW() WHERE id = $1 AND user_id = $2', [notificationId, userId]);
         }
         catch (error) {
             console.error('Error marking user notification as read:', error);
@@ -164,7 +167,7 @@ export class NotificationService {
      */
     static async markAllAsRead() {
         try {
-            await pool.query('UPDATE admin_notifications SET is_read = TRUE, read_at = NOW() WHERE is_read = FALSE');
+            await db_1.pool.query('UPDATE admin_notifications SET is_read = TRUE, read_at = NOW() WHERE is_read = FALSE');
         }
         catch (error) {
             console.error('Error marking all notifications as read:', error);
@@ -176,7 +179,7 @@ export class NotificationService {
      */
     static async markAllUserNotificationsAsRead(userId) {
         try {
-            await pool.query('UPDATE user_notifications SET is_read = TRUE, read_at = NOW() WHERE user_id = $1 AND is_read = FALSE', [userId]);
+            await db_1.pool.query('UPDATE user_notifications SET is_read = TRUE, read_at = NOW() WHERE user_id = $1 AND is_read = FALSE', [userId]);
         }
         catch (error) {
             console.error('Error marking all user notifications as read:', error);
@@ -248,7 +251,7 @@ export class NotificationService {
     static async createSystemAnnouncementForAllUsers(title, message) {
         try {
             // Get all active users
-            const userResult = await pool.query('SELECT id FROM users WHERE is_active = TRUE');
+            const userResult = await db_1.pool.query('SELECT id FROM users WHERE is_active = TRUE');
             // Create a notification for each user
             const promises = userResult.rows.map(user => this.createUserNotification(user.id, 'system_announcement', title, message));
             await Promise.all(promises);
@@ -260,3 +263,4 @@ export class NotificationService {
         }
     }
 }
+exports.NotificationService = NotificationService;

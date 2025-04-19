@@ -40,12 +40,10 @@ type EnvVars = {
 type AnyOtherKey<T extends { [k: string]: any }> = T &
   Omit<{ [k: string]: any }, keyof T>
 
-export const env = process.env as unknown as Readonly<AnyOtherKey<EnvVars>>
+export const env = process.env as unknown as Readonly<AnyOtherKey<EnvVars>>;
 
 // Debug log to help diagnose the issue
 console.log(`Environment variables loaded:
   JWT_SECRET: ${env.JWT_SECRET ? '(exists)' : '(undefined)'}
   DATABASE_URL: ${env.DATABASE_URL ? '(exists)' : '(undefined)'}
 `)
-
-export default env;
