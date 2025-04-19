@@ -1,7 +1,7 @@
 {
   "extends": "../tsconfig.json",
   "compilerOptions": {
-    "outDir": "../backend",
+    "outDir": "../build/backend",
     "rootDir": ".",
     "module": "CommonJS",
     "target": "ES2020",
