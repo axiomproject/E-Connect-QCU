@@ -8,8 +8,11 @@ import * as dbModule from './db';
 const pool = dbModule.pool;
 import bcrypt from 'bcrypt' // Import bcrypt
 import crypto from 'crypto' // For generating verification tokens
-import { sendVerificationEmail, sendPasswordResetEmail } from './services/emailService' // Import email service
-import { NotificationService } from './services/notificationService';
+import * as emailService from './services/emailService';
+const sendVerificationEmail = emailService.sendVerificationEmail;
+const sendPasswordResetEmail = emailService.sendPasswordResetEmail;
+import * as notificationServiceModule from './services/notificationService';
+const NotificationService = notificationServiceModule.NotificationService || notificationServiceModule.default;
 import multer from 'multer'; // Import multer for file uploads
 import path from 'path'; // Import path for file paths
 import fs from 'fs'; // Import fs for file system operations
