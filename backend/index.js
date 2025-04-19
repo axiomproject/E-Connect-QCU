@@ -5,7 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.handler = void 0;
 const express_1 = __importDefault(require("express"));
-const env_1 = require("./env");
+const { env } = require('./env');
 const cors_1 = __importDefault(require("cors"));
 const body_parser_1 = __importDefault(require("body-parser"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
@@ -18,7 +18,7 @@ const multer_1 = __importDefault(require("multer")); // Import multer for file u
 const path_1 = __importDefault(require("path")); // Import path for file paths
 const fs_1 = __importDefault(require("fs")); // Import fs for file system operations
 // Notice how SECRET, from `.env` is loaded like this.
-console.log(`Secret: ${env_1.env.JWT_SECRET}, hostname: ${env_1.env.HOSTNAME}`);
+console.log(`Secret: ${env.JWT_SECRET}, hostname: ${env.HOSTNAME}`);
 const app = (0, express_1.default)();
 // Middleware
 app.use((0, cors_1.default)());
@@ -61,7 +61,7 @@ const authenticateToken = (req, res, next) => {
     const token = authHeader && authHeader.split(' ')[1];
     if (!token)
         return res.status(401).json({ message: 'Authentication required' });
-    jsonwebtoken_1.default.verify(token, env_1.env.JWT_SECRET, (err, user) => {
+    jsonwebtoken_1.default.verify(token, env.JWT_SECRET, (err, user) => {
         if (err)
             return res.status(403).json({ message: 'Invalid or expired token' });
         req.user = user;
@@ -74,7 +74,7 @@ const authenticateAdmin = (req, res, next) => {
     const token = authHeader && authHeader.split(' ')[1];
     if (!token)
         return res.status(401).json({ message: 'Authentication required' });
-    jsonwebtoken_1.default.verify(token, env_1.env.JWT_SECRET, async (err, user) => {
+    jsonwebtoken_1.default.verify(token, env.JWT_SECRET, async (err, user) => {
         if (err)
             return res.status(403).json({ message: 'Invalid or expired token' });
         if (!user.isAdmin) {
@@ -133,7 +133,7 @@ app.post('/api/register', async (req, res) => {
             }
             await client.query('COMMIT');
             // Send the verification email
-            const verificationLink = `${env_1.env.APP_URL}/verify-email?token=${verificationToken}`;
+            const verificationLink = `${env.APP_URL}/verify-email?token=${verificationToken}`;
             await (0, emailService_1.sendVerificationEmail)(email, username, verificationToken);
             console.log(`Verification link: ${verificationLink}`);
             res.status(201).json({
@@ -289,7 +289,7 @@ app.post('/api/reset-password-request', async (req, res) => {
         try {
             console.log(`Attempting to send password reset email to ${email}`);
             await (0, emailService_1.sendPasswordResetEmail)(email, user.username, resetToken);
-            console.log(`Password reset link: ${env_1.env.APP_URL}/reset-password?token=${resetToken}`);
+            console.log(`Password reset link: ${env.APP_URL}/reset-password?token=${resetToken}`);
         }
         catch (emailError) {
             console.error('Error sending password reset email:', emailError);
@@ -298,7 +298,7 @@ app.post('/api/reset-password-request', async (req, res) => {
         res.json({
             message: 'If your email exists in our system, a password reset link will be sent',
             // Only for testing - remove in production
-            resetLink: `${env_1.env.APP_URL}/reset-password?token=${resetToken}`
+            resetLink: `${env.APP_URL}/reset-password?token=${resetToken}`
         });
     }
     catch (error) {
@@ -402,7 +402,7 @@ app.get('/api/verify-email', async (req, res) => {
                 token: jsonwebtoken_1.default.sign({
                     id: userId,
                     email: user.email
-                }, env_1.env.JWT_SECRET, { expiresIn: '24h' }),
+                }, env.JWT_SECRET, { expiresIn: '24h' }),
                 user
             });
         }
@@ -418,7 +418,7 @@ app.get('/api/verify-email', async (req, res) => {
         const token = jsonwebtoken_1.default.sign({
             id: userId,
             email: user.email
-        }, env_1.env.JWT_SECRET, { expiresIn: '24h' });
+        }, env.JWT_SECRET, { expiresIn: '24h' });
         // Commit the transaction
         await client.query('COMMIT');
         console.log(`Verification completed successfully for ${user.email}`);
@@ -862,7 +862,7 @@ app.post('/api/login', async (req, res) => {
             email: user.email,
             isAdmin: user.is_admin || false,
             adminLevel: adminDetails ? adminDetails.admin_level : null
-        }, env_1.env.JWT_SECRET, { expiresIn: '24h' });
+        }, env.JWT_SECRET, { expiresIn: '24h' });
         res.json({
             message: 'Login successful',
             token,
@@ -909,7 +909,7 @@ app.post('/api/admin/login', async (req, res) => {
             email: admin.email,
             isAdmin: true,
             adminLevel: admin.admin_level
-        }, env_1.env.JWT_SECRET, { expiresIn: '24h' });
+        }, env.JWT_SECRET, { expiresIn: '24h' });
         res.json({
             message: 'Admin login successful',
             token,
@@ -1413,7 +1413,7 @@ app.post('/api/resend-verification', async (req, res) => {
         // Store verification token
         await db_1.pool.query('INSERT INTO email_verification (user_id, token, expires_at) VALUES ($1, $2, $3)', [user.id, verificationToken, expiresAt]);
         // Send the verification email
-        const verificationLink = `${env_1.env.APP_URL}/verify-email?token=${verificationToken}`;
+        const verificationLink = `${env.APP_URL}/verify-email?token=${verificationToken}`;
         await (0, emailService_1.sendVerificationEmail)(email, user.username, verificationToken);
         console.log(`New verification link: ${verificationLink}`);
         res.json({
