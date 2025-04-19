@@ -1,6 +1,6 @@
 <template>
     <div class="admin-layout">
-      <AdminLayout pageTitle="Admin Dashboard">
+      <AdminLayout pageTitle="Users">
           <div class="user-actions">
           
           </div>
@@ -1540,13 +1540,23 @@
     
       gap: 1rem;
     }
+    .search-box input {
+    padding: 0.6rem 0.6rem 0.6rem 2.5rem;
+    border: 1px solid #e0e0e0;
+    border-radius: 20px;
+    width: 650px;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+  }
     
     .filter-group {
       width: 100%;
+      flex-direction: column;
+      gap: 0.75rem;
+      align-items: stretch;
     }
-    
-    .filter-group select {
-      flex: 1;
+    .filter-group > * {
+      width: 100%;
     }
     
     .add-user-btn {
@@ -1582,42 +1592,49 @@
       gap: 1rem;
     }
   }
-  .optional-text {
-  font-size: 0.8rem;
-  font-weight: normal;
-  color: #777;
-  font-style: italic;
-}
-/* Password input styles */
-.password-input-container {
-  position: relative;
-  display: flex;
-  align-items: center;
+
+/* Responsive: Always allow horizontal scroll for table on small screens */
+@media (max-width: 900px) {
+  .users-table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .users-table th.email-col,
+  .users-table td.email-cell,
+  .users-table th.status-col,
+  .users-table td.status-col,
+  .users-table th.date-col,
+  .users-table td.date-col,
+  .users-table th.avatar-col,
+  .users-table td:nth-child(2) { /* Hide avatar column */
+    display: none !important;
+  }
+  /* Show actions column */
+  .users-table th.actions-col,
+  .users-table td.actions-col {
+    display: table-cell !important;
+  }
+  .users-table th, .users-table td {
+    padding: 0.6rem 0.3rem;
+    font-size: 0.98rem;
+  }
+  .user-avatar {
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+  }
 }
 
-.password-toggle-icon {
-  position: absolute;
-  right: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  cursor: pointer;
-  color: #767676;
-  transition: color 0.2s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
+/* Optional: Make table header sticky on mobile for better UX */
+@media (max-width: 900px) {
+  .users-table thead th {
+    position: sticky;
+    top: 0;
+    background: #f5f7fa;
+    z-index: 2;
+  }
 }
 
-.password-toggle-icon:hover {
-  color: #43A047;
-}
-
-.password-input-container input {
-  padding-right: 40px; /* Make room for the eye icon */
-  width: 100%;
-}
 /* Modal animation styles */
 .modal-fade-enter-active,
 .modal-fade-leave-active {

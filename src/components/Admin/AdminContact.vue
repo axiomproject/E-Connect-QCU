@@ -1,5 +1,5 @@
 <template>
-    <AdminLayout pageTitle="Contact Messages">
+    <AdminLayout pageTitle="Contact">
       <div class="admin-contact">
         <div class="dashboard-card">
           <div class="card-header">

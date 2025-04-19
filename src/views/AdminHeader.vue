@@ -2,14 +2,10 @@
   <div>
     <div class="admin-header" :class="{ 'sidebar-collapsed': isCollapsed }">
 
-
 <!-- Mobile user info -->
 <div class="mobile-user-info">
   <div class="avatar" @click.stop="toggleMobileUserMenu" ref="avatarRef">
     <img ref="headerAvatarImg" :src="avatarSrc" alt="Admin Avatar" @error="handleAvatarError">
-  </div>
-  <div class="user-details">
-    <div class="username">{{ username }}</div>
   </div>
 </div>
 
@@ -21,7 +17,7 @@
 >
   <div v-if="showMobileUserMenu" class="mobile-user-dropdown-container" ref="mobileUserMenuRef">
     <div class="mobile-user-dropdown">
-      <div class="dropdown-arrow"></div>
+      <div class="mobile-dropdown-username">{{ username }}</div>
       <div class="mobile-user-dropdown-item" @click="navigateTo('/dashboard')">
         <i class="fas fa-arrow-left"></i>
         <span>Return to App</span>
@@ -713,17 +709,9 @@ const onLeave = (el: Element) => {
   box-shadow: 0 2px 12px rgba(46, 125, 50, 0.4);
 }
 
-.mobile-user-info .user-details {
-  overflow: hidden;
-}
-
+.mobile-user-info .user-details,
 .mobile-user-info .username {
-  font-weight: 600;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  color: #2c3e50;
-  font-size: 0.9rem;
+  display: none;
 }
 
 /* Mobile user dropdown menu */
@@ -829,6 +817,18 @@ const onLeave = (el: Element) => {
 
 .mobile-user-dropdown-item.logout:hover {
   background-color: rgba(231, 76, 60, 0.08);
+}
+
+/* Username in mobile dropdown */
+.mobile-dropdown-username {
+  font-weight: 600;
+  color: #2c3e50;
+  font-size: 1rem;
+  text-align: center;
+  padding: 12px 0 4px 0;
+  border-bottom: 1px solid #f0f0f0;
+  margin-bottom: 4px;
+  background: none;
 }
 
 /* Mobile responsive styles */
@@ -1308,4 +1308,10 @@ const onLeave = (el: Element) => {
     opacity: 1;
   }
 }
+@media (max-width: 359px) {
+    .mobile-user-dropdown {
+        left: 5px;
+    }
+}
 </style>
+

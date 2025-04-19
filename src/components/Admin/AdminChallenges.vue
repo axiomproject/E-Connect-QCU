@@ -1,6 +1,6 @@
 <template>
     <div class="admin-layout">
-      <AdminLayout pageTitle="Manage Challenges">
+      <AdminLayout pageTitle="Challenges">
         <div class="admin-challenges">
           <!-- Action Bar -->
           <div class="action-bar">
@@ -998,6 +998,38 @@ Step 3: Complete this"
       grid-template-columns: 1fr;
     }
   }
+
+  /* Mobile-friendly table: show only Challenge and Actions columns */
+  @media (max-width: 900px) {
+    .table-responsive {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .challenges-table th,
+    .challenges-table td {
+      padding: 0.6rem 0.3rem;
+      font-size: 0.98rem;
+    }
+    /* Hide all columns except first (Challenge) and last (Actions) */
+    .challenges-table th:nth-child(2),
+    .challenges-table th:nth-child(3),
+    .challenges-table th:nth-child(4),
+    .challenges-table th:nth-child(5),
+    .challenges-table td:nth-child(2),
+    .challenges-table td:nth-child(3),
+    .challenges-table td:nth-child(4),
+    .challenges-table td:nth-child(5) {
+      display: none !important;
+    }
+    /* Make header sticky for better UX */
+    .challenges-table thead th {
+      position: sticky;
+      top: 0;
+      background: #f5f7fa;
+      z-index: 2;
+    }
+  }
+
   /* Modal animation styles */
 .modal-fade-enter-active,
 .modal-fade-leave-active {

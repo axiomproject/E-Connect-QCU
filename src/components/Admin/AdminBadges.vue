@@ -1,6 +1,6 @@
 <template>
     <div class="admin-layout">
-      <AdminLayout pageTitle="Manage Badges">
+      <AdminLayout pageTitle="Badges">
         <div class="admin-badges">
           <!-- Action Bar -->
           <div class="action-bar">

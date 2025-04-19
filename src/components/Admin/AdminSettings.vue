@@ -1,6 +1,6 @@
 <template>
      <div class="admin-layout">
-        <AdminLayout pageTitle="Admin Settings">
+        <AdminLayout pageTitle="Settings">
     <div class="admin-settings">
 
  
@@ -8,9 +8,6 @@
       <!-- Main Content -->
       <main class="settings-main">
         <div class="container">
-          <section class="hero-section">
-            <p>Manage your admin account preferences and security settings.</p>
-          </section>
           
           <!-- Settings cards section -->
           <section class="cards-section">
@@ -666,7 +663,6 @@ const handleAvatarError = (e: Event) => {
 
 .profile-icon {
   background: linear-gradient(135deg, #43A047, #66BB6A);
-  width: 35px;
 }
 
 .avatar-icon {

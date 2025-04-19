@@ -2341,7 +2341,7 @@ renderUserGrowthChart() {
   
   .card-header {
     flex-direction: column;
-    align-items: flex-start;
+    align-items: center;
     gap: 0.75rem;
   }
   
@@ -2354,6 +2354,289 @@ renderUserGrowthChart() {
     width: 100%;
   }
 }
+
+@media (max-width: 359px) {
+  .admin-dashboard {
+    padding: 0.15rem !important;
+  }
+  .stats-cards {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 0.15rem !important;
+    padding: 0 !important;
+  }
+  .stat-card {
+    padding: 0.3rem !important;
+    flex-direction: row;
+    align-items: center;
+    min-width: 0;
+  }
+  .stat-value {
+    font-size: 0.85rem !important;
+  }
+  .stat-label {
+    font-size: 0.6rem !important;
+  }
+  .stat-icon {
+    width: 20px !important;
+    height: 20px !important;
+    min-width: 20px !important;
+    margin-right: 0.3rem !important;
+  }
+  .stat-icon i {
+    font-size: 0.85rem !important;
+  }
+  .dashboard-row {
+    grid-template-columns: 1fr !important;
+    gap: 0.3rem !important;
+    margin-bottom: 0.5rem !important;
+  }
+  .dashboard-card {
+    padding: 0.15rem !important;
+    border-radius: 5px !important;
+  }
+  .card-header {
+    flex-direction: column;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.5rem 0.2rem !important;
+  }
+  .card-header h3 {
+    font-size: 0.8rem !important;
+  }
+  .card-actions button, 
+  .card-actions select {
+    width: 100% !important;
+    font-size: 0.7rem !important;
+    padding: 0.25rem 0.3rem !important;
+  }
+  .recent-users-list, .challenges-container {
+    padding: 0.2rem !important;
+    max-height: 120px !important;
+  }
+  .user-item {
+    padding: 0.3rem !important;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.15rem;
+  }
+  .user-avatar {
+    width: 18px !important;
+    height: 18px !important;
+    margin-right: 0.3rem !important;
+  }
+  .user-name, .user-email, .user-joined {
+    font-size: 0.6rem !important;
+  }
+  .challenges-table th, .challenges-table td {
+    padding: 0.3rem 0.1rem !important;
+    font-size: 0.6rem !important;
+  }
+  .progress-bar span {
+    font-size: 0.6rem !important;
+  }
+  .quick-actions-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 0.15rem !important;
+    padding: 0.2rem !important;
+  }
+  .quick-action {
+    padding: 0.3rem 0.1rem !important;
+    border-radius: 5px !important;
+  }
+  .quick-action i {
+    font-size: 0.8rem !important;
+    margin-bottom: 0.1rem !important;
+  }
+  .quick-action span {
+    font-size: 0.6rem !important;
+  }
+  .modal-container {
+    width: 99vw !important;
+    max-width: 99vw !important;
+    padding: 0 !important;
+  }
+  .modal-header, .modal-footer {
+    padding: 0.3rem !important;
+  }
+  .modal-body {
+    padding: 0.3rem !important;
+  }
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    padding: 0.3rem !important;
+    font-size: 0.7rem !important;
+  }
+  .form-group label {
+    font-size: 0.7rem !important;
+  }
+  .form-hint {
+    font-size: 0.6rem !important;
+  }
+  .badge-icon-preview {
+    width: 28px !important;
+    height: 28px !important;
+    font-size: 0.8rem !important;
+  }
+  .user-growth-chart,
+  .user-chart,
+  .chart-container {
+    height: 100px !important;
+    min-height: 60px !important;
+    padding: 0.1rem !important;
+  }
+  .announcement-success i {
+    font-size: 1rem !important;
+  }
+  .announcement-success,
+  .announcement-stats,
+  .announcement-error {
+    font-size: 0.6rem !important;
+    padding: 0.3rem !important;
+  }
+}
+
+@media (max-width: 359px) {
+  .admin-dashboard {
+    padding: 0.25rem !important;
+  }
+  .stats-cards {
+    grid-template-columns: 1fr !important;
+    gap: 0.25rem !important;
+    padding: 0 !important;
+    justify-items: anchor-center;
+  }
+  .stat-card {
+    padding: 0.5rem !important;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .stat-value {
+    font-size: 1rem !important;
+  }
+  .stat-label {
+    font-size: 0.7rem !important;
+  }
+  .stat-icon {
+    width: 28px !important;
+    height: 28px !important;
+    min-width: 28px !important;
+    align-self: center;
+  }
+  .stat-icon i {
+    font-size: 1rem !important;
+  }
+  .dashboard-row {
+    grid-template-columns: 1fr !important;
+    gap: 0.5rem !important;
+    margin-bottom: 1rem !important;
+  }
+  .dashboard-card {
+    padding: 0.25rem !important;
+    border-radius: 6px !important;
+  }
+  .card-header {
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 0.5rem !important;
+  }
+  .card-header h3 {
+    font-size: 0.95rem !important;
+  }
+  .card-actions button, 
+  .card-actions select {
+    width: 100% !important;
+    font-size: 0.8rem !important;
+    padding: 0.4rem 0.5rem !important;
+  }
+  .recent-users-list, .challenges-container {
+    padding: 0.5rem !important;
+    max-height: 180px !important;
+  }
+  .user-item {
+    padding: 0.5rem !important;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+  .user-avatar {
+    width: 28px !important;
+    height: 28px !important;
+    margin-right: 0.5rem !important;
+  }
+  .user-name, .user-email, .user-joined {
+    font-size: 0.7rem !important;
+  }
+  .challenges-table th, .challenges-table td {
+    padding: 0.5rem 0.25rem !important;
+    font-size: 0.7rem !important;
+  }
+  .progress-bar span {
+    font-size: 0.7rem !important;
+  }
+  .quick-actions-grid {
+    grid-template-columns: 1fr !important;
+    gap: 0.5rem !important;
+    padding: 0.5rem !important;
+  }
+  .quick-action {
+    padding: 0.5rem 0.25rem !important;
+    border-radius: 6px !important;
+  }
+  .quick-action i {
+    font-size: 1.1rem !important;
+    margin-bottom: 0.25rem !important;
+  }
+  .quick-action span {
+    font-size: 0.75rem !important;
+  }
+  .modal-container {
+    width: 98vw !important;
+    max-width: 98vw !important;
+    padding: 0 !important;
+  }
+  .modal-header, .modal-footer {
+    padding: 0.5rem !important;
+  }
+  .modal-body {
+    padding: 0.5rem !important;
+  }
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    padding: 0.5rem !important;
+    font-size: 0.8rem !important;
+  }
+  .form-group label {
+    font-size: 0.8rem !important;
+  }
+  .form-hint {
+    font-size: 0.7rem !important;
+  }
+  .badge-icon-preview {
+    width: 48px !important;
+    height: 48px !important;
+    font-size: 1.3rem !important;
+  }
+  .user-growth-chart,
+  .user-chart,
+  .chart-container {
+    height: 180px !important;
+    min-height: 120px !important;
+    padding: 0.25rem !important;
+  }
+  .announcement-success i {
+    font-size: 1.5rem !important;
+  }
+  .announcement-success,
+  .announcement-stats,
+  .announcement-error {
+    font-size: 0.75rem !important;
+    padding: 0.5rem !important;
+  }
+}
+
 /* Modal styling */
 .modal-overlay {
   position: fixed;
