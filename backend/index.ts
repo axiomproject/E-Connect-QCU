@@ -1,6 +1,6 @@
 import express from 'express'
 import { type Handler } from 'vite-plugin-mix'
-import { env } from './env';
+const { env } = require('./env');
 import cors from 'cors'
 import bodyParser from 'body-parser'
 import jwt from 'jsonwebtoken'
