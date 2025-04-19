@@ -1383,6 +1383,7 @@ app.delete('/api/admin/settings/avatar', authenticateAdmin, async (req, res) => 
   }
 });
 
+app.use('/uploads', express.static(path.resolve(process.cwd(), 'public/uploads')));
 // Add this new endpoint after your existing /api/admin/avatar-upload endpoint
 
 // Improved admin avatar upload that doesn't require user ID in the filename
