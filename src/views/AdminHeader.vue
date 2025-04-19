@@ -35,7 +35,7 @@
   </div>
 </transition>
 
-        <h1>{{ title }}</h1>
+        <h1 class="admin-header-title">{{ title }}</h1>
       <div class="user-actions">
        
         <div class="notifications" @click.stop="toggleNotifications" ref="notificationRef">
@@ -119,7 +119,7 @@ import { shallowRef } from 'vue';
 
 const avatarCache = shallowRef(new Map());
 const lastAvatarUpdate = ref(Date.now());
-const headerAvatarImg = ref(null);
+const headerAvatarImg = ref<HTMLImageElement | null>(null);
 const emit = defineEmits(['toggle-mobile-menu']);
 
 // Mobile menu toggle with fromDock parameter
@@ -164,7 +164,7 @@ const avatarSrc = computed(() => {
   return processedUrl;
 });
 
-const updateAvatarDirectly = (newUrl) => {
+const updateAvatarDirectly = (newUrl: string) => {
   if (!headerAvatarImg.value) return;
   
   // Create a new image to preload
@@ -185,10 +185,10 @@ const updateAvatarDirectly = (newUrl) => {
 };
 
 // Handle avatar load errors
-const handleAvatarError = (e) => {
+const handleAvatarError = (e: Event) => {
   avatarLoadFailed.value = true;
   if (e.target) {
-    e.target.src = defaultAvatar;
+    (e.target as HTMLImageElement).src = defaultAvatar;
   }
 };
 
@@ -895,11 +895,31 @@ const onLeave = (el: Element) => {
   width: 100%;
 }
 
-.admin-header h1 {
+.admin-header-title {
   font-size: 1.5rem;
   font-weight: 600;
   color: #2E7D32;
   margin: 0;
+  text-align: center;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 768px) {
+  .admin-header-title {
+    font-size: 0.5rem;
+    padding: 0 0.5rem;
+    max-width: 70vw;
+  }
+}
+
+@media (max-width: 480px) {
+  .admin-header-title {
+    font-size: 0.3rem;
+    max-width: 55vw;
+  }
 }
 
 .user-actions {
