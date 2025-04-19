@@ -872,6 +872,55 @@ export default {
 
 @media (max-width: 768px) {
   .modal-container {
+    width: 98%;
+    max-width: 99vw;
+    padding: 0;
+    border-radius: 6px;
+  }
+
+  .modal-header,
+  .modal-footer {
+    padding: 1rem;
+  }
+
+  .modal-header h2 {
+    font-size: 1.05rem;
+  }
+
+  .modal-body {
+    padding: 1rem;
+  }
+
+  .message-content {
+    padding: 0.8rem;
+    font-size: 0.95rem;
+  }
+
+  .message-content h3 {
+    font-size: 0.95rem;
+    margin-bottom: 0.7rem;
+  }
+
+  .meta-label {
+    width: 65px;
+    font-size: 0.92rem;
+  }
+
+  .modal-footer {
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 1rem;
+  }
+
+  .modal-footer button,
+  .modal-footer a {
+    width: 100%;
+    font-size: 0.95rem;
+    padding: 0.5rem 0.8rem;
+    justify-content: center;
+  }
+
+  .modal-container {
     width: 95%;
   }
   
@@ -957,7 +1006,31 @@ export default {
   }
 }
 
-/* Very small screens (phones) */
+@media (max-width: 480px) {
+  .modal-container {
+    width: 100vw;
+    max-width: 100vw;
+    min-width: 0;
+    border-radius: 0;
+  }
+  .modal-header,
+  .modal-footer,
+  .modal-body {
+    padding: 0.7rem;
+  }
+  .modal-header h2 {
+    font-size: 0.98rem;
+  }
+  .message-content {
+    font-size: 0.9rem;
+    padding: 0.6rem;
+  }
+  .meta-label {
+    font-size: 0.88rem;
+    width: 55px;
+  }
+}
+
 @media (max-width: 576px) {
   .messages-table {
     font-size: 0.75rem; /* Even smaller text on very small screens */

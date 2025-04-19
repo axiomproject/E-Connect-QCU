@@ -1643,10 +1643,10 @@
   }
 }
 
-/* Modal animation styles */
+/* Modal animation styles - optimized for mobile performance */
 .modal-fade-enter-active,
 .modal-fade-leave-active {
-  transition: opacity 0.3s ease;
+  transition: opacity 0.15s cubic-bezier(0.4,0,0.2,1);
 }
 
 .modal-fade-enter-from,
@@ -1656,12 +1656,12 @@
 
 .modal-fade-enter-active .modal-container,
 .modal-fade-leave-active .modal-container {
-  transition: transform 0.3s ease, opacity 0.3s ease;
+  transition: transform 0.15s cubic-bezier(0.4,0,0.2,1), opacity 0.15s cubic-bezier(0.4,0,0.2,1);
 }
 
 .modal-fade-enter-from .modal-container,
 .modal-fade-leave-to .modal-container {
-  transform: translateY(20px);
+  transform: translateY(8px) scale(0.98);
   opacity: 0;
 }
   </style>
