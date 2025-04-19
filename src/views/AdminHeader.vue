@@ -191,7 +191,7 @@ const handleAvatarError = (e: Event) => {
 const props = defineProps({
   title: {
     type: String,
-    default: 'Admin Dashboard'
+    default: 'Dashboard'
   },
   isCollapsed: {
     type: Boolean,
