@@ -128,10 +128,6 @@ Complete challenges and goals to earn points and unlock badges that showcase you
 ### Community Leaderboard
 See how your efforts compare to others in the community and get motivated to do more.
 
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
