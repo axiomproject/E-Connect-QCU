@@ -81,10 +81,6 @@
   </p>
 </form>
     
-    <!-- Only for testing purposes - remove in production -->
-    <div v-if="verificationLink" class="verification-test">
-      <p>For testing: <a :href="verificationLink" target="_blank">Click here to verify email</a></p>
-    </div>
   </div>
   
 </template>
