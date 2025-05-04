@@ -351,6 +351,7 @@ const navItems = [
   { path: '/admin/users', title: 'Users', icon: 'fa-users' },
   { path: '/admin/challenges', title: 'Challenges', icon: 'fa-tasks' },
   { path: '/admin/badges', title: 'Badges', icon: 'fa-award' },
+  { path: '/admin/donations', title: 'Donations', icon: 'fa-hand-holding-usd' },
   { path: '/admin/contact', title: 'Contact', icon: 'fa-address-book' },
   { path: '/admin/settings', title: 'Settings', icon: 'fa-cog' }
 ];

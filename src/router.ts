@@ -19,6 +19,8 @@ import AdminSettings from './components/Admin/AdminSettings.vue'
 import AdminContact from './components/Admin/AdminContact.vue'
 import AdminChallenges from './components/Admin/AdminChallenges.vue'
 import AdminBadges from './components/Admin/AdminBadges.vue'
+import AdminDonations from './components/Admin/AdminDonations.vue'
+import Donate from './components/Donate.vue'
 
 // Create routes with proper components
 const routes = [
@@ -87,6 +89,12 @@ const routes = [
       meta: { requiresAuth: true }  // Mark route as requiring authentication
     },
     {
+      path: '/Donate',
+      name: 'Donate',
+      component: Donate,
+      meta: { requiresAuth: true }  // Mark route as requiring authentication
+    },
+    {
       path: '/Leaderboard',
       name: 'Leaderboard',
       component: Leaderboard,
@@ -151,6 +159,12 @@ const routes = [
       path: '/admin/Settings',
       name: 'AdminSettings',
       component: AdminSettings,
+      meta: { requiresAuth: true, requiresAdmin: true }
+    },
+    {
+      path: '/admin/Donations',
+      name: 'AdminDonations',
+      component: AdminDonations,
       meta: { requiresAuth: true, requiresAdmin: true }
     }
 ]

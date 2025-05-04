@@ -2215,6 +2215,77 @@ app.post('/api/user/avatar', authenticateToken, upload.single('avatar'), async (
   }
 });
 
+// Donation routes
+app.post('/api/donations', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const {
+      amount,
+      project,
+      paymentMethod,
+      paymentDetails,
+      isRecurring,
+      donor
+    } = req.body;
+    
+    // Validate required fields
+    if (!amount || !project || !paymentMethod || !donor.firstName || !donor.lastName || !donor.email) {
+      return res.status(400).json({ message: 'Required fields missing' });
+    }
+    
+    // Create donation record
+    const result = await pool.query(
+      `INSERT INTO donations 
+        (user_id, amount, project_id, payment_method, payment_details, is_recurring, 
+         donor_first_name, donor_last_name, donor_email, donor_phone, status) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'completed')
+       RETURNING *`,
+      [userId, amount, project, paymentMethod, JSON.stringify(paymentDetails), 
+       isRecurring, donor.firstName, donor.lastName, donor.email, donor.phone]
+    );
+    
+    // Create notification for the donation (if you have a notification system)
+    try {
+      await NotificationService.createUserNotification(
+        userId,
+        'donation_success',
+        'Thank You for Your Donation!',
+        `Your donation of ₱${amount} to our ${project} project has been received.`
+      );
+    } catch (notificationError) {
+      console.error('Error creating donation notification:', notificationError);
+    }
+    
+    res.status(201).json({ 
+      message: 'Donation processed successfully',
+      donation: result.rows[0]
+    });
+  } catch (error) {
+    console.error('Error processing donation:', error);
+    res.status(500).json({ message: 'Error processing donation' });
+  }
+});
+
+// Get user's donation history
+app.get('/api/donations/history', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    
+    const result = await pool.query(
+      `SELECT id, amount, project_id, is_recurring, donation_date, status
+       FROM donations
+       WHERE user_id = $1
+       ORDER BY donation_date DESC`,
+      [userId]
+    );
+    
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching donation history:', error);
+    res.status(500).json({ message: 'Error fetching donation history' });
+  }
+});
+
 // Add a new route to handle avatar deletion
 app.delete('/api/user/avatar', authenticateToken, async (req, res) => {
   try {
@@ -2953,6 +3024,364 @@ app.get('/api/quotes/random', (req, res) => {
 
     
   });
+
+// Admin donations management
+app.get('/api/admin/donations', authenticateAdmin, async (req, res) => {
+  try {
+    const { 
+      page = 1, 
+      limit = 10, 
+      sort = 'donation_date', 
+      direction = 'desc',
+      status,
+      project,
+      search,
+      startDate,
+      endDate
+    } = req.query;
+    
+    // Build query conditions
+    let conditions = [];
+    let params = [];
+    let paramIndex = 1;
+
+    // Apply filters if provided
+    if (status && status !== 'all') {
+      conditions.push(`status = $${paramIndex++}`);
+      params.push(status);
+    }
+    
+    if (project && project !== 'all') {
+      conditions.push(`project_id = $${paramIndex++}`);
+      params.push(project);
+    }
+    
+    if (search) {
+      conditions.push(`(
+        donor_first_name ILIKE $${paramIndex} OR 
+        donor_last_name ILIKE $${paramIndex} OR 
+        donor_email ILIKE $${paramIndex}
+      )`);
+      params.push(`%${search}%`);
+      paramIndex++;
+    }
+    
+    if (startDate) {
+      conditions.push(`donation_date >= $${paramIndex++}`);
+      params.push(startDate);
+    }
+    
+    if (endDate) {
+      conditions.push(`donation_date <= $${paramIndex++}`);
+      params.push(endDate);
+    }
+    
+    // Assemble where clause
+    const whereClause = conditions.length > 0 ? 'WHERE ' + conditions.join(' AND ') : '';
+    
+    // Get total count for pagination
+    const countQuery = `SELECT COUNT(*) FROM donations ${whereClause}`;
+    const countResult = await pool.query(countQuery, params);
+    const total = parseInt(countResult.rows[0].count);
+    
+    // Validate sort field to prevent SQL injection
+    const validSortFields = ['id', 'amount', 'project_id', 'payment_method', 
+                            'donation_date', 'status', 'donor_first_name', 'donor_last_name'];
+    const sortField = validSortFields.includes(String(sort)) ? String(sort) : 'donation_date';
+    
+    // Validate sort direction
+    const sortDirection = direction === 'asc' ? 'ASC' : 'DESC';
+    
+    // Add pagination and order parameters
+    const offset = (parseInt(page as string) - 1) * parseInt(limit as string);
+    params.push(parseInt(limit as string), offset);
+    
+    // Query for donations with pagination and sorting
+    const donationsQuery = `
+      SELECT * FROM donations
+      ${whereClause}
+      ORDER BY ${sortField} ${sortDirection}
+      LIMIT $${paramIndex++} OFFSET $${paramIndex++}
+    `;
+    
+    const donationsResult = await pool.query(donationsQuery, params);
+    
+    // Send paginated response
+    res.json({
+      donations: donationsResult.rows,
+      pagination: {
+        total,
+        page: parseInt(page as string),
+        limit: parseInt(limit as string),
+        pages: Math.ceil(total / parseInt(limit as string))
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching admin donations:', error);
+    res.status(500).json({ message: 'Error fetching donations' });
+  }
+});
+
+// Verify donation
+app.put('/api/admin/donations/:id/verify', authenticateAdmin, async (req, res) => {
+  try {
+    const donationId = req.params.id;
+    const adminId = req.user.id;
+    
+    // Update donation status to verified
+    const result = await pool.query(
+      `UPDATE donations 
+       SET status = 'verified', verified_by = $1, verified_at = NOW()
+       WHERE id = $2
+       RETURNING *`,
+      [adminId, donationId]
+    );
+    
+    if (result.rowCount === 0) {
+      return res.status(404).json({ message: 'Donation not found' });
+    }
+    
+    // Create notification for the donor
+    try {
+      const donation = result.rows[0];
+      
+      if (donation.user_id) {
+        await NotificationService.createUserNotification(
+          donation.user_id,
+          'donation_verified',
+          'Donation Verified',
+          `Your donation of ₱${donation.amount} has been verified. Thank you for your contribution!`
+        );
+      }
+    } catch (notificationError) {
+      console.error('Error creating donation verification notification:', notificationError);
+    }
+    
+    res.json({ 
+      message: 'Donation verified successfully',
+      donation: result.rows[0]
+    });
+  } catch (error) {
+    console.error('Error verifying donation:', error);
+    res.status(500).json({ message: 'Error verifying donation' });
+  }
+});
+
+// Reject donation
+app.put('/api/admin/donations/:id/reject', authenticateAdmin, async (req, res) => {
+  try {
+    const donationId = req.params.id;
+    const adminId = req.user.id;
+    const { reason } = req.body;
+    
+    // Update donation status to rejected
+    const result = await pool.query(
+      `UPDATE donations 
+       SET status = 'rejected', rejected_by = $1, rejected_at = NOW(), rejected_reason = $2
+       WHERE id = $3
+       RETURNING *`,
+      [adminId, reason || null, donationId]
+    );
+    
+    if (result.rowCount === 0) {
+      return res.status(404).json({ message: 'Donation not found' });
+    }
+    
+    // Create notification for the donor
+    try {
+      const donation = result.rows[0];
+      
+      if (donation.user_id) {
+        await NotificationService.createUserNotification(
+          donation.user_id,
+          'donation_rejected',
+          'Donation Rejected',
+          `There was an issue with your ₱${donation.amount} donation. Please contact support for more information.`
+        );
+      }
+    } catch (notificationError) {
+      console.error('Error creating donation rejection notification:', notificationError);
+    }
+    
+    res.json({ 
+      message: 'Donation marked as rejected',
+      donation: result.rows[0]
+    });
+  } catch (error) {
+    console.error('Error rejecting donation:', error);
+    res.status(500).json({ message: 'Error rejecting donation' });
+  }
+});
+
+// Update donation
+app.put('/api/admin/donations/:id', authenticateAdmin, async (req, res) => {
+  try {
+    const donationId = req.params.id;
+    const {
+      amount,
+      project_id,
+      payment_method,
+      payment_details,
+      is_recurring,
+      donor_first_name,
+      donor_last_name,
+      donor_email,
+      donor_phone,
+      status
+    } = req.body;
+    
+    // Validate required fields
+    if (!amount || !project_id || !payment_method || !donor_first_name || !donor_last_name || !donor_email || !status) {
+      return res.status(400).json({ message: 'Required fields are missing' });
+    }
+    
+    // Update donation
+    const result = await pool.query(
+      `UPDATE donations
+       SET 
+        amount = $1,
+        project_id = $2,
+        payment_method = $3,
+        payment_details = $4,
+        is_recurring = $5,
+        donor_first_name = $6,
+        donor_last_name = $7,
+        donor_email = $8,
+        donor_phone = $9,
+        status = $10,
+        updated_at = NOW()
+       WHERE id = $11
+       RETURNING *`,
+      [
+        amount, project_id, payment_method, JSON.stringify(payment_details), is_recurring,
+        donor_first_name, donor_last_name, donor_email, donor_phone, status, donationId
+      ]
+    );
+    
+    if (result.rowCount === 0) {
+      return res.status(404).json({ message: 'Donation not found' });
+    }
+    
+    res.json({
+      message: 'Donation updated successfully',
+      donation: result.rows[0]
+    });
+  } catch (error) {
+    console.error('Error updating donation:', error);
+    res.status(500).json({ message: 'Error updating donation' });
+  }
+});
+
+// Create new donation (admin)
+app.post('/api/admin/donations', authenticateAdmin, async (req, res) => {
+  try {
+    const {
+      amount,
+      project_id,
+      payment_method,
+      payment_details,
+      is_recurring,
+      donor_first_name,
+      donor_last_name,
+      donor_email,
+      donor_phone,
+      status,
+      user_id
+    } = req.body;
+    
+    // Validate required fields
+    if (!amount || !project_id || !payment_method || !donor_first_name || !donor_last_name || !donor_email) {
+      return res.status(400).json({ message: 'Required fields are missing' });
+    }
+    
+    // Insert new donation
+    const result = await pool.query(
+      `INSERT INTO donations
+        (user_id, amount, project_id, payment_method, payment_details, is_recurring,
+         donor_first_name, donor_last_name, donor_email, donor_phone, status, created_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+       RETURNING *`,
+      [
+        user_id || null, amount, project_id, payment_method, JSON.stringify(payment_details), is_recurring,
+        donor_first_name, donor_last_name, donor_email, donor_phone, status || 'completed', req.user.id
+      ]
+    );
+    
+    res.status(201).json({
+      message: 'Donation created successfully',
+      donation: result.rows[0]
+    });
+  } catch (error) {
+    console.error('Error creating donation:', error);
+    res.status(500).json({ message: 'Error creating donation' });
+  }
+});
+
+// Delete donation
+app.delete('/api/admin/donations/:id', authenticateAdmin, async (req, res) => {
+  try {
+    const donationId = req.params.id;
+    
+    // Check if donation exists
+    const checkResult = await pool.query('SELECT id FROM donations WHERE id = $1', [donationId]);
+    
+    if (checkResult.rowCount === 0) {
+      return res.status(404).json({ message: 'Donation not found' });
+    }
+    
+    // Delete donation
+    await pool.query('DELETE FROM donations WHERE id = $1', [donationId]);
+    
+    res.json({ message: 'Donation deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting donation:', error);
+    res.status(500).json({ message: 'Error deleting donation' });
+  }
+});
+
+// Donation statistics for admin dashboard
+app.get('/api/admin/donations/stats', authenticateAdmin, async (req, res) => {
+  try {
+    // Get total donations
+    const totalQuery = await pool.query('SELECT COUNT(*) FROM donations');
+    const total = parseInt(totalQuery.rows[0].count);
+    
+    // Get total verified donations
+    const verifiedQuery = await pool.query("SELECT COUNT(*) FROM donations WHERE status = 'verified'");
+    const verified = parseInt(verifiedQuery.rows[0].count);
+    
+    // Get total amount
+    const amountQuery = await pool.query("SELECT SUM(amount) FROM donations WHERE status != 'rejected'");
+    const totalAmount = amountQuery.rows[0].sum ? parseFloat(amountQuery.rows[0].sum) : 0;
+    
+    // Get donations by project
+    const projectsQuery = await pool.query(`
+      SELECT project_id, COUNT(*), SUM(amount)
+      FROM donations
+      WHERE status != 'rejected'
+      GROUP BY project_id
+      ORDER BY SUM(amount) DESC
+    `);
+    
+    // Get recent donations
+    const recentQuery = await pool.query(`
+      SELECT * FROM donations
+      ORDER BY donation_date DESC
+      LIMIT 5
+    `);
+    
+    res.json({
+      totalDonations: total,
+      verifiedDonations: verified,
+      totalAmount,
+      byProject: projectsQuery.rows,
+      recent: recentQuery.rows
+    });
+  } catch (error) {
+    console.error('Error fetching donation statistics:', error);
+    res.status(500).json({ message: 'Error fetching donation statistics' });
+  }
+});
 
   app.use(express.static(path.resolve(__dirname, '../../dist')));
   app.get('*', (req, res) => {

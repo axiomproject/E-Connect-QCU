@@ -1,11 +1,12 @@
 <template>
   <div class="dashboard">
     <!-- Header component -->
+     
     <AppHeader 
       :username="user?.username || 'User'" 
       @logout="logout" 
     />
-
+  
     <!-- Main Content -->
     <main class="dashboard-main">
       <div class="container">
@@ -43,6 +44,14 @@
               <button class="card-btn"@click="navigateToCalculator">Calculate</button>
             </div>
           </div>
+
+          <!-- Donation card -->
+<div class="donation-card">
+  <div class="quote-icon">💚</div>
+  <h2>Donate to Eco Causes</h2>
+  <p>Support environmental organizations and projects making a difference.</p>
+  <button class="quote-btn" @click="navigateToDonation">Donate Now</button>
+</div>
           
           <!-- Featured quote card -->
           <div class="quote-card">
@@ -140,6 +149,11 @@ const navigateToGoals = () => {
 }
 const navigateToCalculator = () => {
   router.push('/Calculator')
+}
+
+// Add this function for donation navigation
+const navigateToDonation = () => {
+  router.push('/Donate')
 }
 
 // Quote handling
@@ -441,5 +455,23 @@ onMounted(() => {
     padding-bottom: 70px; /* space for bottom dock */
   }
 }
+/* Donation card styling */
+.donation-card {
+  background: linear-gradient(135deg, #f9f9f9, #ffe8e8);
+  border-radius: 16px;
+  padding: 40px;
+  text-align: center;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+  border-left: 6px solid #e91e63;
+  margin-bottom: 30px;
+}
+
+/* Add to responsive section */
+@media (max-width: 768px) {
+  .donation-card {
+    padding: 30px 20px;
+  }
+}
 </style>
+`
 

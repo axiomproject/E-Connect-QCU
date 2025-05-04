@@ -218,7 +218,7 @@
           </div>
         </div>
       </main>
-      
+      <AdBanner />
       <AppFooter />
       
       <!-- Archive Account Confirmation Modal -->
@@ -260,6 +260,7 @@
   import AppHeader from '../views/Header.vue'
   import AppFooter from '../views/Footer.vue'
   import axios from 'axios'
+  import AdBanner from './AdBanner.vue'
   
   // Store and router initialization
   const router = useRouter()
