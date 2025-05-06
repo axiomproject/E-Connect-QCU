@@ -820,12 +820,15 @@ const confirmDeleteDonation = (donation: Donation): void => {
     flex-wrap: wrap;
     gap: 15px;
     margin-bottom: 20px;
+    width: 100%; /* Ensure full width */
   }
   
   .filters {
     display: flex;
     flex-wrap: wrap;
     gap: 15px;
+    width: 100%; /* Prevent overflow */
+    min-width: 0;
   }
   
   .filter-group {
@@ -863,6 +866,9 @@ const confirmDeleteDonation = (donation: Donation): void => {
   .search-bar {
     display: flex;
     align-items: center;
+    flex-shrink: 0;
+    min-width: 220px;
+    margin-left: auto;
   }
   
   .search-bar input {
@@ -883,6 +889,42 @@ const confirmDeleteDonation = (donation: Donation): void => {
   
   .search-btn:hover {
     background-color: #43A047;
+  }
+  
+  @media (max-width: 900px) {
+    .action-bar {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 10px;
+    }
+    .filters {
+      flex-direction: column;
+      width: 100%;
+      gap: 10px;
+    }
+    .search-bar {
+      width: 100%;
+      margin-left: 0;
+      margin-top: 5px;
+    }
+  }
+  
+  @media (max-width: 768px) {
+    .action-bar {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 10px;
+    }
+    .filters {
+      flex-direction: column;
+      width: 100%;
+      gap: 10px;
+    }
+    .search-bar {
+      width: 100%;
+      margin-left: 0;
+      margin-top: 5px;
+    }
   }
   
   /* Loading */
