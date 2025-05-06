@@ -206,6 +206,46 @@ app.post('/api/register', async (req, res) => {
   }
 })
 
+// Add this endpoint to record ad clicks
+app.post('/api/ad-click', async (req, res) => {
+  try {
+    const { adName } = req.body;
+    if (!adName) {
+      return res.status(400).json({ message: 'adName is required' });
+    }
+
+    // Upsert: increment click_count if exists, else insert new row
+    await pool.query(
+      `
+      INSERT INTO ad_clicks (ad_name, click_count, last_clicked_at)
+      VALUES ($1, 1, NOW())
+      ON CONFLICT (ad_name)
+      DO UPDATE SET click_count = ad_clicks.click_count + 1, last_clicked_at = NOW()
+      `,
+      [adName]
+    );
+
+    res.json({ message: 'Ad click recorded' });
+  } catch (error) {
+    console.error('Error recording ad click:', error);
+    res.status(500).json({ message: 'Error recording ad click' });
+  }
+})
+
+// Admin endpoint to fetch ad click stats
+app.get('/api/admin/ad-clicks', authenticateAdmin, async (req, res) => {
+  try {
+    // Fetch all ad clicks, order by most clicks
+    const result = await pool.query(
+      'SELECT ad_name, click_count, last_clicked_at FROM ad_clicks ORDER BY click_count DESC, last_clicked_at DESC'
+    );
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching ad clicks:', error);
+    res.status(500).json({ message: 'Error fetching ad clicks' });
+  }
+});
+
 // User Goal Management API endpoints
 app.get('/api/user/goals', authenticateToken, async (req, res) => {
   try {

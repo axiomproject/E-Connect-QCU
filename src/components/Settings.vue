@@ -218,8 +218,12 @@
           </div>
         </div>
       </main>
-      <AdBanner />
-      <AppFooter />
+      
+      <!-- Footer area wrapper -->
+      <div class="footer-area">
+        <AdBanner class="ad-banner" />
+        <AppFooter />
+      </div>
       
       <!-- Archive Account Confirmation Modal -->
       <div v-if="showArchiveConfirmation" class="modal-overlay" @click.self="showArchiveConfirmation = false">
@@ -1087,6 +1091,25 @@ input:checked + .toggle-label:before {
   padding-right: 40px; /* Make room for the eye icon */
 }
 
+/* Footer area styles */
+.footer-area {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  margin-top: auto; /* Push to bottom of page if content is short */
+}
+
+.ad-banner {
+  width: 100%;
+  margin-bottom: 0; /* Remove any margin that might cause gaps */
+  display: block; /* Ensure block display */
+}
+
+/* Ensure footer components stick together */
+:deep(.app-footer) {
+  margin-top: 0; /* Remove any margin that might cause gaps */
+}
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .settings-content {
@@ -1128,6 +1151,61 @@ input:checked + .toggle-label:before {
   
   .modal-actions {
     flex-direction: column;
+  }
+
+  /* Enhanced mobile footer styles */
+  .footer-area {
+    display: block; /* Change to block display on mobile */
+    line-height: 0; /* Remove line-height gaps */
+  }
+  
+  .ad-banner {
+    margin: 0;
+    padding: 0;
+    line-height: 0;
+  }
+  
+  /* Force removal of any potential gaps */
+  :deep(.app-footer) {
+    margin: 0;
+    padding-top: 0;
+    line-height: normal;
+  }
+
+  /* Ad Banner text responsive styling */
+  :deep(.ad-banner) {
+    /* Target the banner wrapper */
+    width: 100%;
+    overflow: hidden;
+    margin-bottom: 10px; /* Add top margin to create space below mobile dock */
+  }
+
+  /* For the content inside the banner */
+  :deep(.ad-banner > div) {
+    margin-top: 10px; /* Additional top margin for content inside banner */
+    padding-top: 5px; /* Add some padding inside the banner */
+  }
+
+  :deep(.ad-banner h3),
+  :deep(.ad-banner h4) {
+    /* Ensure headings in the ad are responsive */
+    font-size: 0.9rem !important;
+    line-height: 1.2 !important;
+  }
+
+  :deep(.ad-banner p),
+  :deep(.ad-banner span),
+  :deep(.ad-banner div) {
+    /* Make paragraph text and other text elements responsive */
+    font-size: 0.8rem !important;
+    line-height: 1.2 !important;
+    margin: 0.3rem 0 !important;
+  }
+
+  :deep(.ad-banner a) {
+    /* Style the links in the ad */
+    font-size: 0.8rem !important;
+    padding: 4px 8px !important;
   }
 }
 </style>

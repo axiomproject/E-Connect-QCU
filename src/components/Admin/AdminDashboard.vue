@@ -188,6 +188,41 @@
             </div>
           </div>
         </div>
+
+        <!-- Ads Clicked Section -->
+        <div class="dashboard-row">
+          <div class="dashboard-card ad-clicks-card">
+            <div class="card-header">
+              <h3>Ad Clicks</h3>
+            </div>
+            <div class="ad-clicks-container">
+              <table class="ad-clicks-table">
+                <thead>
+                  <tr>
+                    <th>Ad Name</th>
+                    <th>Click Count</th>
+                    <th>Last Clicked</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-if="loadingAdClicks">
+                    <td colspan="3" class="text-center">
+                      <i class="fas fa-spinner fa-spin mr-2"></i> Loading ad clicks...
+                    </td>
+                  </tr>
+                  <tr v-else-if="adClicks.length === 0">
+                    <td colspan="3" class="text-center">No ad click data available</td>
+                  </tr>
+                  <tr v-else v-for="ad in adClicks" :key="ad.ad_name">
+                    <td>{{ ad.ad_name }}</td>
+                    <td>{{ ad.click_count }}</td>
+                    <td>{{ ad.last_clicked_at ? new Date(ad.last_clicked_at).toLocaleString() : '-' }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
       </div>
   
     <!-- Add User Modal -->
@@ -756,6 +791,8 @@ userForm: {
         newUsersThisMonth: 0
       },
       popularChallenges: [],
+      adClicks: [],
+      loadingAdClicks: false,
       error: null
     };
   },
@@ -772,6 +809,7 @@ userForm: {
     this.fetchRecentUsers();
     this.fetchPopularChallenges();
     this.fetchUserGrowthData();
+    this.fetchAdClicks();
   },
 methods: {
   formatDate(dateString) {
@@ -1506,6 +1544,18 @@ renderUserGrowthChart() {
         console.error('Error fetching popular challenges:', error);
         // Use empty array if there's an error
         this.popularChallenges = [];
+      }
+    },
+    async fetchAdClicks() {
+      this.loadingAdClicks = true;
+      try {
+        const authHeader = this.getAuthHeader();
+        const response = await axios.get('/api/admin/ad-clicks', authHeader);
+        this.adClicks = response.data || [];
+      } catch (error) {
+        this.adClicks = [];
+      } finally {
+        this.loadingAdClicks = false;
       }
     },
     navigateToChallenges() {
@@ -2884,6 +2934,63 @@ renderUserGrowthChart() {
 .modal-fade-leave-to .modal-container {
   transform: translateY(20px);
   opacity: 0;
+}
+
+.ad-clicks-card {
+  min-width: 300px;
+  margin-top: 1.5rem;
+}
+
+.ad-clicks-container {
+  padding: 1rem 1.5rem;
+  overflow-x: auto;
+}
+
+.ad-clicks-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.ad-clicks-table th, .ad-clicks-table td {
+  padding: 0.85rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.ad-clicks-table th {
+  font-weight: 600;
+  color: #7f8c8d;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.ad-clicks-table tr:last-child td {
+  border-bottom: none;
+}
+
+.ad-clicks-table tr:hover td {
+  background-color: #f8f9fa;
+}
+
+@media (max-width: 868px) {
+  .ad-clicks-container {
+    padding: 0.5rem;
+  }
+  .ad-clicks-table th, .ad-clicks-table td {
+    padding: 0.5rem 0.5rem;
+    font-size: 0.85rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .ad-clicks-container {
+    padding: 0.2rem;
+  }
+  .ad-clicks-table th, .ad-clicks-table td {
+    padding: 0.3rem 0.2rem;
+    font-size: 0.7rem;
+  }
 }
 </style>
 

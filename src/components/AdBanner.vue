@@ -2,19 +2,29 @@
 <template>
   <div v-if="visible" class="ad-banner">
     <button class="close-btn" @click="visible = false" aria-label="Close Ad">&times;</button>
-    <div class="ad-collage-container">
-      <div class="ad-collage-text">{{ ad.text }}</div>
-      <div class="ad-collage">
-        <img
-          v-for="(img, idx) in ad.images"
-          :key="idx"
-          :src="img"
-          alt="Ad"
-          class="ad-collage-image"
-          draggable="false"
-        />
+    <a
+      href="https://www.wwf.org.ph/"
+      target="_blank"
+      rel="noopener noreferrer"
+      class="ad-banner-link"
+      tabindex="0"
+      @click="recordAdClick"
+      style="display: flex; flex: 1; align-items: center; justify-content: center; text-decoration: none; color: inherit;"
+    >
+      <div class="ad-collage-container">
+        <div class="ad-collage-text">{{ ad.text }}</div>
+        <div class="ad-collage">
+          <img
+            v-for="(img, idx) in ad.images"
+            :key="idx"
+            :src="img"
+            alt="Ad"
+            class="ad-collage-image"
+            draggable="false"
+          />
+        </div>
       </div>
-    </div>
+    </a>
   </div>
 </template>
 
@@ -25,28 +35,28 @@ const ads = [
   {
     text: 'Go Green: Switch to Renewable Energy Today!',
     images: [
-      'https://cdn.pixabay.com/photo/2017/09/04/18/40/eco-2711584_1280.jpg', // Eco campaign banner
-      'https://cdn.pixabay.com/photo/2016/11/29/09/32/banner-1867286_1280.jpg', // Green energy ad
-      'https://upload.wikimedia.org/wikipedia/commons/7/7c/Eco-friendly-banner.jpg', // Eco-friendly banner
-      'https://cdn.pixabay.com/photo/2017/01/20/15/06/eco-1995071_1280.jpg' // Save the planet ad
+      '/ads/ad1/1.jpg', // Local image from public folder
+      '/ads/ad1/2.jpg', // Local image from public folder
+      '/ads/ad1/3.jpg', // Local image from public folder
+      '/ads/ad1/4.jpg'  // Local image from public folder
     ]
   },
   {
     text: 'Join the Movement: Recycle, Reuse, Restore!',
     images: [
-      'https://cdn.pixabay.com/photo/2017/09/04/18/40/eco-2711584_1280.jpg',
-      'https://cdn.pixabay.com/photo/2017/01/20/15/06/eco-1995071_1280.jpg',
-      'https://upload.wikimedia.org/wikipedia/commons/7/7c/Eco-friendly-banner.jpg',
-      'https://cdn.pixabay.com/photo/2016/11/29/09/32/banner-1867286_1280.jpg'
+      '/ads/ad1/1.jpg',
+      '/ads/ad2/4.jpg',
+      '/ads/ad1/3.jpg',
+      '/ads/ad1/2.jpg'
     ]
   },
   {
     text: 'Protect Our Planet: Support Eco-Friendly Initiatives!',
     images: [
-      'https://upload.wikimedia.org/wikipedia/commons/7/7c/Eco-friendly-banner.jpg',
-      'https://cdn.pixabay.com/photo/2017/09/04/18/40/eco-2711584_1280.jpg',
-      'https://cdn.pixabay.com/photo/2016/11/29/09/32/banner-1867286_1280.jpg',
-      'https://cdn.pixabay.com/photo/2017/01/20/15/06/eco-1995071_1280.jpg'
+      '/ads/ad1/3.jpg',
+      '/ads/ad1/1.jpg',
+      '/ads/ad2/2.jpeg',
+      '/ads/ad1/4.jpg'
     ]
   }
 ]
@@ -57,11 +67,24 @@ const visible = ref(true)
 onMounted(() => {
   ad.value = ads[Math.floor(Math.random() * ads.length)]
 })
+
+// Record ad click to backend
+const recordAdClick = async () => {
+  try {
+    await fetch('/api/ad-click', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ adName: ad.value.text })
+    });
+  } catch (e) {
+    // Fail silently
+  }
+}
 </script>
 
 <style scoped>
 .ad-banner {
-  background: linear-gradient(90deg, #e0f7fa 0%, #e8f5e9 100%);
+  background: linear-gradient(90deg, #e0f7fa70 0%, #e8f5e9a1 100%);
   border: 1.5px solid #b2dfdb;
   border-radius: 14px;
   margin: 24px 0;
@@ -94,7 +117,7 @@ onMounted(() => {
   z-index: 2;
   transform: translate(-50%, -50%);
   color: #fff;
-  background: rgba(34, 139, 34, 0.575);
+  background: rgba(34, 139, 34, 0.712);
   padding: 10px 32px;
   border-radius: 8px;
   font-size: 1.2rem;
@@ -154,6 +177,24 @@ onMounted(() => {
   background: #ffebee;
   color: #d32f2f;
   outline: none;
+}
+
+.ad-banner-link {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  color: inherit;
+  outline: none;
+}
+
+.ad-banner-link:focus .ad-collage-text,
+.ad-banner-link:hover .ad-collage-text {
+  background: rgba(34, 139, 34, 0.85);
+  box-shadow: 0 2px 12px rgba(44, 62, 80, 0.18);
+  text-decoration: underline;
 }
 
 @media (max-width: 900px) {

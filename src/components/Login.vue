@@ -106,7 +106,9 @@
       </form>
       
     </template>
-    
+  </div>
+  <div class="ad-banner-wrapper">
+    <AdBanner class="ad-banner" />
   </div>
 </template>
 
@@ -115,6 +117,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import "../styles/Login.css" 
+import AdBanner from './AdBanner.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -678,5 +681,36 @@ input:focus {
   max-width: 100%;
   box-sizing: border-box;
   overflow: hidden;
+}
+
+.ad-banner-wrapper {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100vw;
+  display: flex;
+  justify-content: flex-end; /* align to the right */
+  align-items: flex-end;
+  z-index: 10;
+  background: transparent;
+  pointer-events: none;
+  padding: 0;
+  margin: 0;
+}
+
+.ad-banner {
+  pointer-events: auto;
+  margin: 0;
+  padding: 0;
+  /* Ensure the ad is flush with the bottom and right */
+  border-radius: 0;
+}
+
+/* On mobile, still flush with bottom/right */
+@media (max-width: 480px) {
+  .ad-banner-wrapper {
+    padding-bottom: 0;
+  }
 }
 </style>
