@@ -799,7 +799,6 @@ const confirmDeleteDonation = (donation: Donation): void => {
   
   <style scoped>
   .admin-donations {
-    padding: 20px;
     max-width: 1400px;
     margin: 0 auto;
   }
