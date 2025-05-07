@@ -1,4 +1,5 @@
 <template>
+    <div>
   <div class="login-container">
     <img src="../assets/logo.png" alt="Eco Tracker Logo" class="login-logo" />
     
@@ -110,6 +111,7 @@
   <div class="ad-banner-wrapper">
     <AdBanner class="ad-banner" />
   </div>
+</div>
 </template>
 
 <script setup lang="ts">
