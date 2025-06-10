@@ -32,11 +32,11 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 # Step 4: Set Render credentials
-$env:PGPASSWORD = "mZrp2NEOtPYcxvvthMj45SCshiWJPr9p"
+$env:PGPASSWORD = "QWFcP2LyIVWgcew7m3Gsa9PlyJsaKBFs"
 
 # Step 5: Test connection to Render
 Write-Host "Testing connection to Render database..." -ForegroundColor Green
-& "$PG_BIN\psql" -h dpg-d008hn9r0fns73e10kvg-a.singapore-postgres.render.com -p 5432 -U econnect_user -d econnect -c "SELECT version();"
+& "$PG_BIN\psql" -h dpg-d1475oruibrs73e0hap0-a.singapore-postgres.render.com -p 5432 -U e_connect_user -d e_connect -c "SELECT version();"
 
 if ($LASTEXITCODE -ne 0) {
     Write-Host "Error connecting to Render database. Please check your credentials." -ForegroundColor Red
@@ -64,7 +64,7 @@ BEGIN
 END `$`$;
 "@
 
-& "$PG_BIN\psql" -h dpg-d008hn9r0fns73e10kvg-a.singapore-postgres.render.com -p 5432 -U econnect_user -d econnect -c "$dropTablesAndFunctionsCommand"
+& "$PG_BIN\psql" -h dpg-d1475oruibrs73e0hap0-a.singapore-postgres.render.com -p 5432 -U e_connect_user -d e_connect -c "$dropTablesAndFunctionsCommand"
 
 if ($LASTEXITCODE -ne 0) {
     Write-Host "Error dropping existing objects. Continuing anyway..." -ForegroundColor Yellow
@@ -74,10 +74,10 @@ if ($LASTEXITCODE -ne 0) {
 Write-Host "Restoring to Render database..." -ForegroundColor Green
 
 # First, disable triggers during restore
-& "$PG_BIN\psql" -h dpg-d008hn9r0fns73e10kvg-a.singapore-postgres.render.com -p 5432 -U econnect_user -d econnect -c "SET session_replication_role = 'replica';"
+& "$PG_BIN\psql" -h dpg-d1475oruibrs73e0hap0-a.singapore-postgres.render.com -p 5432 -U e_connect_user -d e_connect -c "SET session_replication_role = 'replica';"
 
 # Then restore the database
-& "$PG_BIN\psql" -h dpg-d008hn9r0fns73e10kvg-a.singapore-postgres.render.com -p 5432 -U econnect_user -d econnect -f $BACKUP_FILE
+& "$PG_BIN\psql" -h dpg-d1475oruibrs73e0hap0-a.singapore-postgres.render.com -p 5432 -U e_connect_user -d e_connect -f $BACKUP_FILE
 
 $restoreExitCode = $LASTEXITCODE
 if ($restoreExitCode -ne 0) {
@@ -90,7 +90,7 @@ if ($restoreExitCode -ne 0) {
 }
 
 # Re-enable triggers after restore
-& "$PG_BIN\psql" -h dpg-d008hn9r0fns73e10kvg-a.singapore-postgres.render.com -p 5432 -U econnect_user -d econnect -c "SET session_replication_role = 'origin';"
+& "$PG_BIN\psql" -h dpg-d1475oruibrs73e0hap0-a.singapore-postgres.render.com -p 5432 -U e_connect_user -d e_connect -c "SET session_replication_role = 'origin';"
 
 # Step 8: Fix sequences if needed
 Write-Host "Fixing sequences if needed..." -ForegroundColor Green
@@ -123,10 +123,10 @@ BEGIN
 END`$`$;
 "@
 
-& "$PG_BIN\psql" -h dpg-d008hn9r0fns73e10kvg-a.singapore-postgres.render.com -p 5432 -U econnect_user -d econnect -c "$fixSequencesCommand"
+& "$PG_BIN\psql" -h dpg-d1475oruibrs73e0hap0-a.singapore-postgres.render.com -p 5432 -U e_connect_user -d e_connect -c "$fixSequencesCommand"
 
 # Step 9: Verify migration
 Write-Host "Verifying migration..." -ForegroundColor Green
-& "$PG_BIN\psql" -h dpg-d008hn9r0fns73e10kvg-a.singapore-postgres.render.com -p 5432 -U econnect_user -d econnect -c "SELECT table_name, (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = 'public' AND table_name = information_schema.tables.table_name) AS column_count FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name;"
+& "$PG_BIN\psql" -h dpg-d1475oruibrs73e0hap0-a.singapore-postgres.render.com -p 5432 -U e_connect_user -d e_connect -c "SELECT table_name, (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = 'public' AND table_name = information_schema.tables.table_name) AS column_count FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name;"
 
 Write-Host "Migration completed successfully!" -ForegroundColor Green
