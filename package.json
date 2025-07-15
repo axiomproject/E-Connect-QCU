@@ -5,7 +5,12 @@
   "scripts": {
     "dev": "vite",
    "build": "tsc --project backend/tsconfig.json && vite build && ls -lR build",
-    "start": "node build/backend/index.js"
+    "start": "node build/backend/index.js",
+    "import-to-neon": "node import-to-neon.js",
+    "import-to-neon:ps": "powershell -ExecutionPolicy Bypass -File import-to-neon.ps1",
+    "import-to-neon:bat": "import-to-neon.bat",
+    "check-db": "node check-database.js",
+    "db-health": "node check-database.js"
   },
   "prettier": {
     "arrowParens": "avoid",
